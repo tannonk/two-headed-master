@@ -39,7 +39,7 @@ def parse_test_utterances(utterance_json_file):
         sys.stderr.write('Problem loading utterances from JSON file.')
         sys.exit(1)
 
-    return set([entry['utt_id'] for entry in utterances['utterances']])
+    return set([entry['start'] for entry in utterances['utterances']])
 
 
 def main():
@@ -108,11 +108,11 @@ def main():
             # row = dict(zip(col_names, row))
             # print(row['utt_id'])
 
-            if labelled_row['utt_id'] in test_utterances:
+            if labelled_row['audio_id'] in test_utterances:
                 test_file_writer.writerow(row)
                 test_c += 1
 
-            elif args.dev_split and labelled_row['utt_id'] in dev_utterances:
+            elif args.dev_split and labelled_row['audio_id'] in dev_utterances:
                 dev_file_writer.writerow(row)
                 dev_c += 1
 
