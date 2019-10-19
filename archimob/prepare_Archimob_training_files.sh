@@ -97,8 +97,9 @@ mkdir -p $output_dir $tmp_dir $data_dir $ling_dir
 # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are
 # mapped to less specific classes (see process_archimob.csv.py)
 echo "Processing $input_csv:"
-$scripts_dir/process_archimob_csv.py -i $input_csv -f -p -t $output_trans \
-				     -s $spn_word -n $sil_word -o $output_lst
+# Use -transcr option only when the original input was XML!!
+$scripts_dir/process_archimob_csv.py -i $input_csv -transcr original -f -p \
+                     -t $output_trans -s $spn_word -n $sil_word -o $output_lst
 
 [[ $? -ne 0 ]] && echo 'Error calling process_archimob_csv.py' && exit 1
 
@@ -122,8 +123,10 @@ sort $data_dir/utt2spk -o $data_dir/utt2spk
 
 # 3.1.- First, extract the vocabulary:
 echo "Extracting the vocabulary: $vocabulary"
+# cut -f 2 $output_trans | perl -pe 's#\s+#\n#g' | grep -v -E '^$|<' | sort -u | \
+#     sort -o $vocabulary
 cut -f 2 $output_trans | perl -pe 's#\s+#\n#g' | grep -v -P '^$|<' | sort -u | \
-    sort -o $vocabulary
+     sort -o $vocabulary
 
 # 3.2.- Second, the lexicon:
 echo "Generating the lexicon: $output_lexicon"

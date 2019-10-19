@@ -48,6 +48,12 @@ def get_args():
     parser.add_argument('--input-csv', '-i', help='Input csv file',
                         required=True)
 
+    parser.add_argument('--type-transcription', '-transcr', help='Define the' \
+                        'the preferable type of transcriptions: original' \
+                        '(swiss) or normalizes (german)', type=str,
+                        const='original', nargs='?',
+                        choices=['original', 'normalized'])
+
     parser.add_argument('--do-filtering', '-f', help='If given, exclude ' \
                         'utterances marked with no-relevant-speech or ' \
                         'speech-in-speech', action='store_true')
@@ -78,6 +84,7 @@ def get_args():
 
     parser.add_argument('--output-trans', '-t', help='Output transcriptions ' \
                         'file', required=True)
+
     parser.add_argument('--output-list', '-o', help='Output wave list',
                         required=True)
 
@@ -315,6 +322,7 @@ def main():
         sys.exit(1)
 
     csv_reader = csv.reader(input_f)
+    n_filtered = 0
 
     for index, row in enumerate(csv_reader):
 
@@ -324,6 +332,7 @@ def main():
             continue
 
         if len(row) != header_size:
+            print(row)
             sys.stderr.write('Error reading {0}: different number of elements' \
                              ' in header ({1}), and line {2} ' \
                              '({3})\n'.format(args.input_csv, header_size,
@@ -333,18 +342,40 @@ def main():
         data_dict = {key: value.decode('utf8')
                      for key, value in zip(header, row)}
 
-        if float(data_dict['duration']) <= args.min_duration:
-            print '\tSkipping {0}: duration = {1}'.format(data_dict['utt_id'],
-                                                          data_dict['duration'])
-            continue
+        # if float(data_dict['duration']) <= args.min_duration:
+        #     print '\tSkipping {0}: duration = {1}'.format(data_dict['utt_id'],
+        #                                                   data_dict['duration'])
+        #     continue
 
         # Check filtering:
-        if args.do_filtering or args.test_mode:
-            if int(data_dict['speech-in-speech']) or \
-               int(data_dict['no-relevant-speech']):
-                if verbose:
-                    print '\tFiltering {0}'.format(data_dict['utt_id'])
-                continue
+        if args.type_transcription in ['original', 'normalized']:
+            if args.do_filtering or args.test_mode:
+                if int(data_dict['anonymity']) == 1 or \
+                   int(data_dict['speech_in_speech']) == 1 or \
+                   int(data_dict['missing_audio']) == 1 or \
+                   int(data_dict['no_relevant_speech']) == 1:
+                    if verbose:
+                        n_filtered += 1
+                        print '\tFiltering {0}. anonym={1};' \
+                        ' sp_in_sp={2};' \
+                        ' non_sp{3};' \
+                        ' non_sp{4}'.format(data_dict['utt_id'],
+                                            data_dict['anonymity'],
+                                            data_dict['speech_in_speech'],
+                                            data_dict['missing_audio'],
+                                            data_dict['no_relevant_speech'])
+                    continue
+        else:
+            if args.do_filtering or args.test_mode:
+                if int(data_dict['speech_in_speech']) == 1 or \
+                   int(data_dict['no_relevant_speech']) == 1:
+                    if verbose:
+                        print '\tFiltering {0}. anonym={1};' \
+                        ' sp_in_sp={2}; non_sp{3}'.format(data_dict['utt_id'],
+                                                          data_dict['anonymity'],
+                                                          data_dict['speech_in_speech'],
+                                                          data_dict['no_relevant_speech'])
+                    continue
 
         if args.test_mode:
             # Check unintelligible words without best guess:
@@ -361,14 +392,18 @@ def main():
                         'word)'.format(data_dict['utt_id'])
                 continue
 
-        if args.do_processing:
-            # Process text:
-            transcription = process_transcription(data_dict['transcription'],
-                                                  mappings, args.spn_word)
-        else:
-            # Just keep the original one as it is. You probably do not want to
-            # do this...
-            transcription = data_dict['transcription']
+        if args.type_transcription == 'original':
+            if args.do_processing:
+                # Process text:
+                transcription = process_transcription(data_dict['transcription'],
+                                                      mappings, args.spn_word)
+            else:
+                # Just keep the original one as it is. You probably do not want to
+                # do this...
+                transcription = data_dict['transcription']
+
+        if args.type_transcription == 'normalized':
+            transcription = data_dict['normalized']
 
         # Write the transcriptions file:
         output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
@@ -376,6 +411,9 @@ def main():
 
         # Write the utterance list:
         output_l.write('{0}\n'.format(data_dict['utt_id']))
+
+    if verbose:
+        print("{} transcriptions were filtered out.\n".format(n_filtered))
 
     input_f.close()
     output_t.close()

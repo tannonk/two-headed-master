@@ -1,21 +1,22 @@
 #!/usr/bin/python
 
 """
-Script that takes as input a list of Exmaralda transcription files and the
-corresponding wavefiles, and processes them to make them more suitable for
+Script that takes as input a list of Exmaralda or XML transcription files and
+the corresponding wavefiles, and processes them to make them more suitable for
 acoustic model training.
 input:
 """
 
 import sys
 import os
+import re
 
 import xml.etree.ElementTree as ET
 
 import argparse
 import wave
 
-from archimob_chunk import ArchiMobChunk
+from archimob_chunk import ArchiMobChunkEXB, ArchiMobChunkXML
 from extract_wav_segment import extract_segment
 
 
@@ -29,8 +30,12 @@ def get_args():
 
     parser = argparse.ArgumentParser(description=my_desc)
 
-    parser.add_argument('--input-exb', '-i', help='Input Exmaralda files',
+    parser.add_argument('--input-annotation', '-i', help='Input XML/ EXB files',
                         nargs='+', required=True)
+
+    parser.add_argument('--input-format', '-format', help='XML or EXB',
+                        const='exb', nargs='?', choices=['exb', 'xml'],
+                        type=str, required=True)
 
     parser.add_argument('--wav-dir', '-w', help='Folder with the wavefiles ' \
                         'corresponding to the input Exmaralda files. If not ' \
@@ -57,7 +62,7 @@ def get_args():
 
 def get_timepoints(root):
     """
-    Parses the header of the exb file to get the mapping among timepoint
+    Parses the header of the XML / EXB file to get the mapping among timepoint
     identifiers and the time they refer to (for example: TLI_0 => 0.00).
     input:
         * root (ElementTree): root of the xml tree.
@@ -74,10 +79,12 @@ def get_timepoints(root):
     return output_dict
 
 
-def chunk_transcriptions(root, time_dict, chunk_basename):
+def chunk_transcriptions(root, chunk_basename,
+                         input_format, namespace=None,
+                         time_dict=None):
     """
-    Extracts from the exb file the events from each tier, and creates chunks
-    out of them.
+    Extracts from the XML / EXB file the events from each tier, and creates
+    chunks out of them.
     input:
         * root (ElementTree): root of the xml file.
         * time_dict (dict): dictionary with the timepoints.
@@ -94,50 +101,106 @@ def chunk_transcriptions(root, time_dict, chunk_basename):
 
     chunk_index = 1
 
-    for tier in root.iter('tier'):
+    if input_format == 'exb':
+        for tier in root.iter('tier'):
 
-        current_spk = '{0}_{1}'.format(chunk_basename,
-                                       tier.attrib.get('speaker'))
+            current_spk = '{0}_{1}'.format(chunk_basename,
+                                           tier.attrib.get('speaker'))
 
-        if verbose:
-            print 'New tier:'
-            print '\tid = {0}'.format(tier.attrib.get('id'))
-            print '\tspeaker = {0}'.format(current_spk)
+            if verbose:
+                print 'New tier:'
+                print '\tid = {0}'.format(tier.attrib.get('id'))
+                print '\tspeaker = {0}'.format(current_spk)
 
-        for event in tier.iter('event'):
+            for event in tier.iter('event'):
 
-            # Extract the info from the exb file:
-            event_start = event.attrib.get('start')
-            event_end = event.attrib.get('end')
-            if event.text is None:
-                text = ''
+                # Extract the info from the exb file:
+                event_start = event.attrib.get('start')
+                event_end = event.attrib.get('end')
+                if event.text is None:
+                    text = ''
+                else:
+                    text = event.text.strip()
+
+                # Create the chunk object:
+                chunk_key = ArchiMobChunkEXB.create_chunk_key(chunk_basename,
+                                                              current_spk,
+                                                              chunk_index)
+
+                # Update the chunk index
+                chunk_index += 1
+
+                if time_dict[event_end] <= time_dict[event_start]:
+                    sys.stderr.write('WARN: not positive duration for chunk {0} ' \
+                                     '({1}, {2} - {3}. {4}). There is probably an' \
+                                     ' error in the Exmaralda ' \
+                                     'file\n'.format(chunk_key,
+                                                     time_dict[event_start],
+                                                     time_dict[event_end],
+                                                     event_start, event_end))
+                    continue
+
+                new_chunk = ArchiMobChunkEXB(chunk_key, text,
+                                             time_dict[event_start],
+                                             time_dict[event_end],
+                                             event_start,
+                                             current_spk)
+
+                if verbose:
+                    print '\tNew event: {0}'.format(new_chunk)
+
+                # Add the chunk to the output list:
+                chunk_list.append(new_chunk)
+
+                # Update the overlap dictionary:
+                if event_start in overlap_dict:
+                    overlap_dict[event_start].append(chunk_key)
+                else:
+                    overlap_dict[event_start] = [chunk_key]
+
+    elif input_format == 'xml':
+        for u in root.iter('{' + namespace + '}u'):
+
+            if u.attrib.get('who') == "interviewer":
+                current_spk = '{0}_{1}'.format(chunk_basename, "I")
+            elif u.attrib.get('who') == "otherPerson":
+                current_spk = '{0}_{1}'.format(chunk_basename, "A")
             else:
-                text = event.text.strip()
+                spk_name = u.attrib.get('who')[10:11]
+                current_spk = '{0}_{1}'.format(chunk_basename, spk_name)
+
+            if verbose:
+                print 'New tier:'
+                print '\tid = {0}'.format(u.attrib.get('xml:id'))
+                print '\tspeaker = {0}'.format(current_spk)
+
+            event_start = u.attrib.get('start')
+            event_start = event_start[15:]
+
+            norm_utterance = []
+            swiss_utterance = []
+
+            for word in u.findall('{' + namespace + '}w'):
+                if word.text is not None:
+                    norm_utterance.append(word.attrib.get('normalised').encode('utf-8'))
+                    swiss_utterance.append(word.text.encode('utf-8'))
 
             # Create the chunk object:
-            chunk_key = ArchiMobChunk.create_chunk_key(chunk_basename,
-                                                       current_spk,
-                                                       chunk_index)
+            chunk_key = ArchiMobChunkXML.create_chunk_key(chunk_basename,
+                                                          current_spk,
+                                                          chunk_index)
 
             # Update the chunk index
             chunk_index += 1
 
-            if time_dict[event_end] <= time_dict[event_start]:
-                sys.stderr.write('WARN: not positive duration for chunk {0} ' \
-                                 '({1}, {2} - {3}. {4}). There is probably an' \
-                                 ' error in the Exmaralda ' \
-                                 'file\n'.format(chunk_key,
-                                                 time_dict[event_start],
-                                                 time_dict[event_end],
-                                                 event_start, event_end))
-                continue
+            new_chunk = ArchiMobChunkXML(chunk_key,
+                                         ' '.join(swiss_utterance).decode('utf-8'),
+                                         ' '.join(norm_utterance).decode('utf-8'),
+                                         current_spk,
+                                         event_start)
 
-            new_chunk = ArchiMobChunk(chunk_key, text, time_dict[event_start],
-                                      time_dict[event_end], event_start,
-                                      current_spk)
-
-            if verbose:
-                print '\tNew event: {0}'.format(new_chunk)
+            # if verbose:
+            print '\tNew event: {0}'.format(new_chunk)
 
             # Add the chunk to the output list:
             chunk_list.append(new_chunk)
@@ -148,11 +211,11 @@ def chunk_transcriptions(root, time_dict, chunk_basename):
             else:
                 overlap_dict[event_start] = [chunk_key]
 
-
     return (chunk_list, overlap_dict)
 
 
-def write_chunk_transcriptions(chunk_list, overlap_dict, output_f):
+def write_chunk_transcriptions(chunk_list, overlap_dict,
+                               input_format, output_f):
     """
     Writes the transcriptions of all the chunks to the output file.
     input:
@@ -169,27 +232,56 @@ def write_chunk_transcriptions(chunk_list, overlap_dict, output_f):
         output_f.write('{0},"{1}",'.format(chunk.key,
                                            chunk.trans.encode('utf8')))
 
+        # Write the normalized transcription:
+        if input_format == 'xml':
+            output_f.write('"{0}",'.format(chunk.norm.encode('utf8')))
+
         # Write the speaker id:
         output_f.write('{0},'.format(chunk.spk_id))
 
-        # Duration:
-        duration = chunk.end - chunk.beg
+        if input_format == 'xml':
+            # Write the audio id:
+            output_f.write('{0},'.format(chunk.audio_id))
 
-        output_f.write('{0:.2f},'.format(duration))
+            # Anonym - Non-anonym:
+            if re.search("\*\*\*", chunk.trans) is not None:
+                output_f.write('{0},'.format(1))
+            else:
+                output_f.write('{0},'.format(0))
 
-        if (len(overlap_dict[chunk.init_timepoint]) > 1 or
-            '[speech_in_speech]' in chunk.trans):
-            overlap = 1
-        else:
-            overlap = 0
+            # Overlap - Non-overlap:
+            if (len(overlap_dict[chunk.audio_id]) > 1 or
+                '[speech_in_speech]' in chunk.trans):
+                overlap = 1
+            else:
+                overlap = 0
+            output_f.write('{0},'.format(overlap))
 
+            # Missing audio file: is created as a column filled with nulls
+            output_f.write('{0},'.format(0))
+
+        # Speech - Non-speech:
         if (len(chunk.trans) == 0 or
             '[no_relevant_speech]' in chunk.trans):
             no_relevant_speech = 1
         else:
             no_relevant_speech = 0
 
-        output_f.write('{0},{1}'.format(overlap, no_relevant_speech))
+        if input_format == 'exb':
+            # Duration:
+            duration = chunk.end - chunk.beg
+
+            output_f.write('{0:.2f},'.format(duration))
+
+            if (len(overlap_dict[chunk.init_timepoint]) > 1 or
+                '[speech_in_speech]' in chunk.trans):
+                overlap = 1
+            else:
+                overlap = 0
+
+            output_f.write('{0},'.format(overlap))
+
+        output_f.write('{0}'.format(no_relevant_speech))
 
         output_f.write('\n')
 
@@ -232,62 +324,81 @@ def main():
                                                             err))
         sys.exit(1)
 
-    # Write the header:
-    output_f.write('utt_id,transcription,speaker_id,duration,' \
-                   'speech-in-speech,no-relevant-speech\n')
+    if args.input_format == 'exb':
+        # Write the header:
+        output_f.write('utt_id,transcription,speaker_id,duration,' \
+                       'speech_in_speech,no_relevant_speech\n')
 
-    # Create the output folder:
-    if args.output_wav_dir and not os.path.exists(args.output_wav_dir):
-        os.makedirs(args.output_wav_dir)
+        # Create the output folder:
+        if args.output_wav_dir and not os.path.exists(args.output_wav_dir):
+            os.makedirs(args.output_wav_dir)
 
-    # Process all the Exmaralda files:
-    for input_file in args.input_exb:
+    elif args.input_format == 'xml':
+        # Write the header:
+        output_f.write('utt_id,transcription,normalized,speaker_id,audio_id,' \
+                       'anonymity,speech_in_speech,missing_audio,' \
+                       'no_relevant_speech\n')
+
+    # Process all the XML / EXB files:
+    for input_file in args.input_annotation:
 
         print 'Processing {0}'.format(input_file)
 
         if not os.path.exists(input_file):
-            sys.stderr.write('The input Exmaralda file {0} does ' \
+            sys.stderr.write('The input XML file {0} does ' \
                              'not exist\n'.format(input_file))
             sys.exit(1)
 
         basename = os.path.splitext(os.path.split(input_file)[1])[0]
 
         # Read the xml tree:
-        exb_tree = ET.parse(input_file)
+        xml_tree = ET.parse(input_file)
+        root = xml_tree.getroot()
 
-        root = exb_tree.getroot()
+        if args.input_format == 'exb':
 
-        # Read the timepoints:
-        time_dict = get_timepoints(root)
+            # Read the timepoints:
+            time_dict = get_timepoints(root)
 
-        (chunk_list, overlap_dict) = chunk_transcriptions(root, time_dict,
-                                                          basename)
+            (chunk_list, overlap_dict) = chunk_transcriptions(root, basename,
+                                                              args.input_format,
+                                                              time_dict)
 
-        write_chunk_transcriptions(chunk_list, overlap_dict, output_f)
+            write_chunk_transcriptions(chunk_list, overlap_dict,
+                                       args.input_format, output_f)
 
-        # Finally, extract the waveforms corresponding to the chunks:
-        if args.wav_dir:
-            input_wav = os.path.join(args.wav_dir, '{0}.wav'.format(basename))
+            if args.wav_dir:
+                # Finally, extract the waveforms corresponding to the chunks:
+                input_wav = os.path.join(args.wav_dir,
+                                         '{0}.wav'.format(basename))
 
-            if not os.path.exists(input_wav):
-                sys.stderr.write('The wavefile {0}, corresponding to {1}, ' \
-                                 'does not exist\n'.format(input_wav,
-                                                           input_file))
-                sys.exit(1)
+                if not os.path.exists(input_wav):
+                    sys.stderr.write('The wavefile {0}, corresponding to {1}, ' \
+                                     'does not exist\n'.format(input_wav,
+                                                               input_file))
+                    sys.exit(1)
 
 
-            # Create the wave object:
-            try:
-                wave_in = wave.open(input_wav, 'r')
-            except wave.Error as err:
-                sys.stderr.write('Wrong format for input wavefile {0} ' \
-                                 '({1})\n'.format(input_wav, err))
-                sys.exit(1)
+                # Create the wave object:
+                try:
+                    wave_in = wave.open(input_wav, 'r')
+                except wave.Error as err:
+                    sys.stderr.write('Wrong format for input wavefile {0} ' \
+                                     '({1})\n'.format(input_wav, err))
+                    sys.exit(1)
 
-            extract_wave_chunks(chunk_list, wave_in, args.output_wav_dir)
+                extract_wave_chunks(chunk_list, wave_in, args.output_wav_dir)
 
-            wave_in.close()
+                wave_in.close()
 
+        elif args.input_format == 'xml':
+            namespace = root.tag.split('}')[0].strip('{')
+            print namespace
+            (chunk_list, overlap_dict) = chunk_transcriptions(root, basename,
+                                                              args.input_format,
+                                                              namespace)
+            write_chunk_transcriptions(chunk_list, overlap_dict,
+                                       args.input_format, output_f)
 
     output_f.close()
 
