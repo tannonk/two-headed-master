@@ -47,24 +47,75 @@ Steps:
 - run `decode_nnet.sh`
 
 Running example with approximate cmds:
-1. XML ot .csv
-    for train:
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py -i /home/../data/original/train_xml/*.xml -format xml -o /home/../data/processed/train.csv
+1. XML to .csv
+
+    ```
+    python /home/code_base/archimob/process_exmaralda_xml.py \
+    -i /home/ubuntu/data/archimob_r2/train_xml/*.xml \
+    -format xml \
+    -o /home/../data/processed/archimob.csv
+    ```
+
+    1.2. split train and test sets
+    ```
+    python /home/code_base/archimob/split_data.py \
+    -i /home/.../data/processed/archimob.csv \
+    -o /home/.../data/processed \
+    -t /home/ubuntu/data/archimob_r2/meta_info/test_set.json
+    ```
+
+    <!-- for train:
+
+    ```
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py \
+    -i /home/.../data/original/train_xml/*.xml \
+    -format xml \
+    -o /home/.../data/processed/train.csv
+    ```
+
     for test:
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py -i /home/../data/original/test_xml/*.xml -format xml -o /home/../data/processed/test.csv
+    ```
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py \
+    -i /home/../data/original/test_xml/*.xml \
+    -format xml \
+    -o /home/.../data/processed/test.csv
+    ``` -->
+
 2. rename chunked wavs
+
     for train:
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py -i /home/.../data/processed/train.csv -chw /home/.../data/processed/wav_train/
+    ```
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py \
+    -i /home/.../data/processed/train.csv \
+    -chw /home/.../data/processed/wav_train/
+    ```
     for test:
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py -i /home/.../data/processed/test.csv -chw /home/.../data/processed/wav_test/
+    ```
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py \
+    -i /home/.../data/processed/test.csv \
+    -chw /home/.../data/processed/wav_test/
+    ```
+
 3. Training AM
+
+    ```
     nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/train_AM.sh /home/.../data/processed/train.csv /home/.../data/processed/wav_train /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM
+    ```
+
 4. Create vocabulary
+    ```
     /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/create_vocabulary.py -i /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM/initial_data/ling/lexicon.txt -o /home/.../data/processed/vocabulary_train.txt
+    ```
+
 5. Lingware (no need of nohup actually, as it is fast...)
+    ```
     nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/compile_lingware.sh out_AM/initial_data/ling /home/.../data/processed/vocabulary_train.txt /home/.../data/processed/language_model/language_model.arpa out_AM/models/discriminative/nnet_disc out_ling
+    ```
+
 6. Decoding
+    ```
     nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/decode_nnet.sh /home/.../data/processed/test.csv /home/.../data/processed/wav_test out_AM/models/discriminative/nnet_disc out_ling out_decode
+    ```
 
 # CHANGES
 
@@ -100,14 +151,29 @@ NEW:
 - A new argument is introduced: `--input-format (-format)`, which allows the choice of the input EXB or XML formats.
 
 - input:
-  - a) -format exb transcription files in EXB (Exmaralda) format — the same as in the old version (is still default!!).
-  - b) -format xml transcription files in XML format.
+  - a) `-format exb` for transcription files in EXB (Exmaralda) format — the same as in the old version (is still default!!).
+  - b) `-format xml` for transcription files in XML format.
+
 - output:
   - a) for EXB, the same .csv output as in the old version
-  - b) for XML, .csv contains the following info: [utt_id, transcription, normalized, speaker_id, audio_id, anonymity, speech_in_speech, missing_audio, no-relevant-speech]
+  - b) for XML, .csv contains the following fields:
+    - utt_id
+    - transcription
+    - normalized
+    - speaker_id
+    - audio_id
+    - anonymity
+    - speech_in_speech
+    - missing_audio
+    - no-relevant-speech
 
 ##### to process Exmaralda files (.exb)
-`archimob/process_exmaralda_xml.py -i data/ArchiMob/EXB/*.exb -format exb -o train.csv`
+```
+archimob/process_exmaralda_xml.py \
+-i data/ArchiMob/EXB/*.exb \
+-format exb \
+-o train.csv
+```
 
 ##### to process XML files (.xml)
 ```
@@ -117,9 +183,19 @@ archimob/process_exmaralda_xml.py \
 -o train.csv
 ```
 
-**Note**: to switch from the original transcription to the normalised one, make change in “archimob/prepare_Archimob_training_files.sh”: line 100:
-$scripts_dir/process_archimob_csv.py -i $input_csv -transcr original -f -p \
-                     -t $output_trans -s $spn_word -n $sil_word -o $output_lst
+**Note**: to switch from the original transcription to the normalised one, make change in `archimob/prepare_Archimob_training_files.sh`: line 100:
+
+```
+$scripts_dir/process_archimob_csv.py \
+-i $input_csv \
+-transcr original \
+-f \
+-p \
+-t $output_trans \
+-s $spn_word \
+-n $sil_word \
+-o $output_lst
+```
 
 
 #### IMPORTANT
