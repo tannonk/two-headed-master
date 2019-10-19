@@ -1,0 +1,11 @@
+# ignore all logs
+*.log
+# ignore temp files
+*.tmp
+# OS files
+.DS_Store
+thumbs.db
+# compiled files
+*.pyc
+*.class
+
