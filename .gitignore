@@ -6,6 +6,8 @@
 .DS_Store
 thumbs.db
 # compiled files
+__pycache__/
+__pycache__/*
 *.pyc
 *.class
 

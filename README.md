@@ -36,7 +36,7 @@ The Kaldi recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681dcf5a55eeb2e) wa
   - steps: general scripts related to the different steps followed in the Kaldi
     recipes.
 
-# ASR PIPELINE 18.10. (Iuliia)
+# 18.10.19 (Iuliia)
 
 Steps:
 - XML to .csv: with `archimob/process_exmaralda_xml.py`
@@ -72,7 +72,7 @@ Running example with approximate cmds:
 
 FILES THAT HAVE BEEN CHANGED for this step:
 - `archimob/process_exmaralda_xml.py`
-- `archimobarchimob_chunk.py`
+- `archimob/archimob_chunk.py`
 - `archimob/prepare_Archimob_training_files.sh`
 - `archimob/process_archimob_csv.py`
 
@@ -173,3 +173,12 @@ NEW:
 - Now as an input argument, which would contain test transcription info, .csv test file instead of `references.txt` is taken (.csv for test data is created with the same script that is used for .csv train file: `archimob/process_exmaralda_xml.py`).
 - input:
   - .csv as the first argument; other arguments stay unchanged.
+
+
+## 19.10.19 (Tannon)
+
+Added script `split_data.py`
+- Input:
+  - `archimob.csv` (output from `process_exmaralda_xml.py`)
+  - `output directory` (train, test and dev (if applicable) files are written automatically)
+  - `test_set.json` (JSON file containing utterances for test set)
