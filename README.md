@@ -56,7 +56,15 @@ Running example with approximate cmds:
     -o /home/../data/processed/archimob.csv
     ```
 
-    1.2. split train and test sets
+    1.2. rename chunked wavs **Note**: This only needs to be done once!
+
+    ```
+    python /home/code_base/archimob/rename_wavs.py \
+    -i /home/../data/processed/archimob.csv \
+    -chw /home/ubuntu/data/archimob_r2/audio
+    ```
+
+    1.3. split train and test sets according to the test set utterances in JSON file
     ```
     python /home/code_base/archimob/split_data.py \
     -i /home/.../data/processed/archimob.csv \
@@ -81,40 +89,39 @@ Running example with approximate cmds:
     -o /home/.../data/processed/test.csv
     ``` -->
 
-2. rename chunked wavs
-
-    for train:
-    ```
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py \
-    -i /home/.../data/processed/train.csv \
-    -chw /home/.../data/processed/wav_train/
-    ```
-    for test:
-    ```
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/rename_wavs.py \
-    -i /home/.../data/processed/test.csv \
-    -chw /home/.../data/processed/wav_test/
-    ```
-
 3. Training AM
 
     ```
-    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/train_AM.sh /home/.../data/processed/train.csv /home/.../data/processed/wav_train /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM
+    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/train_AM.sh \
+    /home/.../data/processed/train.csv \
+    /home/.../data/processed/wav_train \
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM
     ```
 
 4. Create vocabulary
     ```
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/create_vocabulary.py -i /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM/initial_data/ling/lexicon.txt -o /home/.../data/processed/vocabulary_train.txt
+    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/create_vocabulary.py \
+    -i /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/out_AM/initial_data/ling/lexicon.txt \
+    -o /home/.../data/processed/vocabulary_train.txt
     ```
 
 5. Lingware (no need of nohup actually, as it is fast...)
     ```
-    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/compile_lingware.sh out_AM/initial_data/ling /home/.../data/processed/vocabulary_train.txt /home/.../data/processed/language_model/language_model.arpa out_AM/models/discriminative/nnet_disc out_ling
+    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/compile_lingware.sh \
+    out_AM/initial_data/ling \
+    /home/.../data/processed/vocabulary_train.txt \
+    /home/.../data/processed/language_model/language_model.arpa \
+    out_AM/models/discriminative/nnet_disc \
+    out_ling
     ```
 
 6. Decoding
     ```
-    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/decode_nnet.sh /home/.../data/processed/test.csv /home/.../data/processed/wav_test out_AM/models/discriminative/nnet_disc out_ling out_decode
+    nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/decode_nnet.sh \
+    /home/.../data/processed/test.csv \
+    /home/.../data/processed/wav_test \
+    out_AM/models/discriminative/nnet_disc \
+    out_ling out_decode
     ```
 
 # CHANGES
@@ -139,6 +146,7 @@ OLD:
   - .csv built with the data from transcriptions: [utt_id, transcription, speaker_id, duration, speech-in-speech, no-relevant-speech]
 
 ##### to process exmaralda (.exb) and audio (.wav) files
+
 ```
 archimob/process_exmaralda_xml.py \
 -i data/original/all_exb/*.exb \
@@ -167,7 +175,7 @@ NEW:
     - missing_audio
     - no-relevant-speech
 
-##### to process Exmaralda files (.exb)
+##### to process Exmaralda files (.exb) !!! There is a bug here on line 111 !!!
 ```
 archimob/process_exmaralda_xml.py \
 -i data/ArchiMob/EXB/*.exb \
@@ -183,7 +191,7 @@ archimob/process_exmaralda_xml.py \
 -o train.csv
 ```
 
-**Note**: to switch from the original transcription to the normalised one, make change in `archimob/prepare_Archimob_training_files.sh`: line 100:
+**Note**: to switch from Dieth transcription to normalised, make change in `archimob/prepare_Archimob_training_files.sh`: line 100:
 
 ```
 $scripts_dir/process_archimob_csv.py \
@@ -197,7 +205,6 @@ $scripts_dir/process_archimob_csv.py \
 -o $output_lst
 ```
 
-
 #### IMPORTANT
 **Filtering**: The script now also includes 4 columns, which enable further filtering. Filtering criteria are:
 - anonymity
@@ -207,24 +214,36 @@ $scripts_dir/process_archimob_csv.py \
 
 **Missing_audio** is filtered during the renaming step in `renaming_wavs.py`. This includes cases where audio file is present but is empty. The other three filtering criteria are already filtered during this step (with the information available from XML).
 
-
 ### 2) Rename chunked wav files (new script)
+
+
+**NOTE** Skip this step if not running for the FIRST time! This only has to be done once for all data! The renamed wav files are currently in `/home/ubuntu/data/archimob_r2/audio`.
 
 `archimob/rename_wavs.py`
   — renames chunked .wav files in accordance with their transcriptions. Information about the alignment between audio files and transcriptions is taken from .csv [audio_id] (in XML "media-pointer" information)
 
-To run:
+<!-- To run:
 
 ```
 archimob/rename_wavs.py \
 -i input_csv \
 -chw dir_with_chunked_wavs
-```
+``` -->
 
-### 3) Make vocabulary
+### 3) Split data for training and testing
+
+`split_data.py`
+  - automatically splits the input csv into train, test and dev (if applicable) files
+  - this script ensures that we are using a standardised test set for comparative evaluations
+  - Input:
+    - `archimob.csv` (output from `process_exmaralda_xml.py`)
+    - `output directory` (train, test and dev (if applicable) files are written automatically)
+    - `test_set.json` (JSON file containing utterances for test set)
+
+
+### 4) Make vocabulary
 
 `archimob/create_vocabulary.py`
-
   — creates `vocabulary_train.txt` file, which is used at the **LINGWARE** step (Language Model), based on the `lexicon.txt` file (created during the training step).
 
 To run:
@@ -235,7 +254,7 @@ archimob/create_vocabulary.py \
 -o data/processed/vocabulary_train_43.txt
 ```
 
-### 4) Decoding
+### 5) Decoding
 
 The script changed: `decode_nnet.sh`
 
@@ -249,12 +268,3 @@ NEW:
 - Now as an input argument, which would contain test transcription info, .csv test file instead of `references.txt` is taken (.csv for test data is created with the same script that is used for .csv train file: `archimob/process_exmaralda_xml.py`).
 - input:
   - .csv as the first argument; other arguments stay unchanged.
-
-
-## 19.10.19 (Tannon)
-
-Added script `split_data.py`
-- Input:
-  - `archimob.csv` (output from `process_exmaralda_xml.py`)
-  - `output directory` (train, test and dev (if applicable) files are written automatically)
-  - `test_set.json` (JSON file containing utterances for test set)
