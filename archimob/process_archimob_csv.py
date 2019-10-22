@@ -51,7 +51,7 @@ def get_args():
     parser.add_argument('--type-transcription', '-transcr', help='Define the' \
                         'the preferable type of transcriptions: original' \
                         '(swiss) or normalizes (german)', type=str,
-                        const='original', nargs='?',
+                        default='original', nargs='?',
                         choices=['original', 'normalized'])
 
     parser.add_argument('--do-filtering', '-f', help='If given, exclude ' \
@@ -406,7 +406,7 @@ def main():
             transcription = data_dict['normalized']
 
         # Write the transcriptions file:
-        output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
+	output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
                                            transcription.encode('utf8')))
 
         # Write the utterance list:
