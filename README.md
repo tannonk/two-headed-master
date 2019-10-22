@@ -268,3 +268,17 @@ NEW:
 - Now as an input argument, which would contain test transcription info, .csv test file instead of `references.txt` is taken (.csv for test data is created with the same script that is used for .csv train file: `archimob/process_exmaralda_xml.py`).
 - input:
   - .csv as the first argument; other arguments stay unchanged.
+
+### 6) Language Modeling
+
+The script `simple_lm.sh` now accepts the new csv as input.
+Example call:
+bash ./archimob/simple_lm.sh \
+	-o 3 \
+	-c manual/clusters.txt \
+	-t original \
+	/home/tannon/processed/baseline/train.csv \
+	/home/tannon/lm/baseline/original
+
+
+
