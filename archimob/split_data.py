@@ -8,11 +8,9 @@ Example call:
     python3 archimob/split_data.py \
     -i archimob_utterance.csv \
     -o output_directory \
-    -t test_set.json \
-    -d dev_set.json (if available)
+    --test test_set.json \
+    --dev dev_set.json (if available)
 """
-
-
 
 import sys
 import json
@@ -23,15 +21,17 @@ import os
 
 def set_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument('-t', '--test_split', required=False, help='JSON file containing utterance ids for test set utterances.')
-    ap.add_argument('-d', '--dev_split', required=False, help='JSON file containing utterance ids for dev set utterances.')
+    ap.add_argument('--train', required=False, help='JSON file containing utterance ids for training set utterances.')
+    ap.add_argument('--test', required=False, help='JSON file containing utterance ids for test set utterances.')
+    ap.add_argument('--dev', required=False, help='JSON file containing utterance ids for dev set utterances.')
     ap.add_argument('-o', '--outpath', required=True, help='Output directory for train directory and test directory.')
     ap.add_argument('-i', '--input-csv', required=True, help='Input directory containing exmaralda XML')
+
     return ap.parse_args()
 
-def parse_test_utterances(utterance_json_file):
+def parse_json(utterance_json_file):
 
-    with open(utterance_json_file, 'r', encoding='utf8') as inf:
+    with open(utterance_json_file, 'r') as inf:
 
         utterances = json.load(inf, encoding='utf8')
 
@@ -45,19 +45,27 @@ def parse_test_utterances(utterance_json_file):
 def main():
     args = set_args()
 
-    # read in test split data
-    if args.test_split:
-        test_utterances = parse_test_utterances(args.test_split)
+    # read in train split data
+    if args.train:
+        train_utterances = parse_json(args.train)
         sys.stderr.write('Collected {0} utterances from {1}\n'.format(
-            len(test_utterances), args.test_split))
+            len(train_utterances), args.train))
     else:
-        dev_utterances = set()
+        train_utterances = set()
+
+    # read in test split data
+    if args.test:
+        test_utterances = parse_json(args.test)
+        sys.stderr.write('Collected {0} utterances from {1}\n'.format(
+            len(test_utterances), args.test))
+    else:
+        test_utterances = set()
 
     # read in dev split data
-    if args.dev_split:
-        dev_utterances = parse_test_utterances(args.dev_split)
+    if args.dev:
+        dev_utterances = parse_test_utterances(args.dev)
         sys.stderr.write('Collected {0} utterances from {1}\n'.format(
-            len(test_utterances), args.dev_split))
+            len(test_utterances), args.dev))
     else:
         dev_utterances = set()
 
@@ -67,18 +75,19 @@ def main():
 
     outfiles = []
 
-    train_file = args.outpath+'/'+'train.csv'
-    train_file_handle = open(train_file, 'w', encoding='utf8')
-    train_file_writer = csv.writer(train_file_handle)
-    outfiles.append(train_file_handle)
+    if args.train:
+        train_file = args.outpath+'/'+'train.csv'
+        train_file_handle = open(train_file, 'w', encoding='utf8')
+        train_file_writer = csv.writer(train_file_handle)
+        outfiles.append(train_file_handle)
 
-    if args.test_split:
+    if args.test:
         test_file = args.outpath+'/'+'test.csv'
         test_file_handle = open(test_file, 'w', encoding='utf8')
         test_file_writer = csv.writer(test_file_handle)
         outfiles.append(test_file_handle)
 
-    if args.dev_split:
+    if args.dev:
         dev_file = args.outpath+'/'+'dev.csv'
         dev_file_handle = open(dev_file, 'w', encoding='utf8')
         dev_file_writer = csv.writer(dev_file_handle)
@@ -100,7 +109,7 @@ def main():
         # write headers
         train_file_writer.writerow(col_names)
         test_file_writer.writerow(col_names)
-        if args.dev_split:
+        if args.dev:
             dev_file_writer.writerow(col_names)
 
         for row in reader:
@@ -108,17 +117,26 @@ def main():
             # row = dict(zip(col_names, row))
             # print(row['utt_id'])
 
+
             if labelled_row['audio_id'] in test_utterances:
                 test_file_writer.writerow(row)
                 test_c += 1
 
-            elif args.dev_split and labelled_row['audio_id'] in dev_utterances:
+            elif args.dev and labelled_row['audio_id'] in dev_utterances:
                 dev_file_writer.writerow(row)
                 dev_c += 1
 
             else:
-                train_file_writer.writerow(row)
-                train_c += 1
+                # if a restriction on training utterances is provided, only add relevant utterances.
+                if len(train_utterances) != 0:
+                    if labelled_row['audio_id'] in train_utterances:
+                        train_file_writer.writerow(row)
+                        train_c += 1
+
+                # if no restriction is given for training utterances, take all of them
+                else:
+                    train_file_writer.writerow(row)
+                    train_c += 1
 
     # close all opened files
     for f in outfiles:
