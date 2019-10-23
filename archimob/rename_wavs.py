@@ -65,18 +65,23 @@ def main():
 
         for phrase in csv_annotation:
             current_id = phrase['utt_id']
+            # if not renamed yet
             current_audio = re.sub('-', '_', phrase['audio_id'])
 
-            old_name = os.path.join(directory,
+            curr_audio_unrenamed = os.path.join(directory,
                                     "{}{}".format(current_audio, ".wav"))
             target_name = os.path.join(directory,
-                                       "{}{}".format(current_id, ".wav"))
+                                         "{}{}".format(current_id, ".wav"))
+            # if has been already renamed
+            curr_audio_renamed = os.path.join(directory,
+                                              "{}{}".format(current_id,
+                                                            ".wav"))
 
-            if os.path.exists(old_name):
-                if os.path.getsize(old_name) != 0:
+            if os.path.exists(curr_audio_unrenamed):
+                if os.path.getsize(curr_audio_unrenamed) != 0:
                     phrase['missing_audio'] = '0'
                     if current_audio != prev_audio:
-                        os.rename(old_name, target_name)
+                        os.rename(curr_audio_unrenamed, target_name)
                     else:
                         n_overlap += 1
                         print("WARNING: {} and {} refer to the same audio {}.".format(prev_id,
@@ -86,6 +91,11 @@ def main():
                     n_transcription_only += 1
                     phrase['missing_audio'] = '1'
                     print("WARNING: there is no audio for the fragment {}".format(current_id))
+
+            elif os.path.exists(curr_audio_renamed):
+                if os.path.getsize(curr_audio_renamed) != 0:
+                    phrase['missing_audio'] = '0'
+
             else:
                 n_transcription_only += 1
                 phrase['missing_audio'] = '1'
