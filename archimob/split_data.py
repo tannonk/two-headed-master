@@ -75,11 +75,10 @@ def main():
 
     outfiles = []
 
-    if args.train:
-        train_file = args.outpath+'/'+'train.csv'
-        train_file_handle = open(train_file, 'w', encoding='utf8')
-        train_file_writer = csv.writer(train_file_handle)
-        outfiles.append(train_file_handle)
+    train_file = args.outpath+'/'+'train.csv'
+    train_file_handle = open(train_file, 'w', encoding='utf8')
+    train_file_writer = csv.writer(train_file_handle)
+    outfiles.append(train_file_handle)
 
     if args.test:
         test_file = args.outpath+'/'+'test.csv'
@@ -108,7 +107,8 @@ def main():
 
         # write headers
         train_file_writer.writerow(col_names)
-        test_file_writer.writerow(col_names)
+        if args.test:
+            test_file_writer.writerow(col_names)
         if args.dev:
             dev_file_writer.writerow(col_names)
 
