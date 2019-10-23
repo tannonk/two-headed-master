@@ -26,15 +26,19 @@ export LC_ALL=C
 scripts_dir=`dirname $0`
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
+transcription='orig'
 
 echo $0 $@
-while getopts 's:n:h' option; do
+while getopts 's:n:t:h' option; do
     case $option in
 	s)
 	    spn_word=${OPTARG}
 	    ;;
 	n)
 	    sil_word=${OPTARG}
+	    ;;
+	t)
+	    transcription=${OPTARG} # allows to select original (orig) or normalised (norm)
 	    ;;
 	h)
 	    echo "$0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] input_csv graphemic_clusters output_dir"
@@ -53,7 +57,7 @@ done
 shift $((OPTIND-1))
 
 if [[ $# -ne 4 ]]; then
-    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] input_csv input_wav_dir graphemic_clusters output_dir"
+    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-t 'orig'/'norm'] input_csv input_wav_dir graphemic_clusters output_dir"
     exit 1
 fi
 
@@ -91,14 +95,16 @@ done
 
 mkdir -p $output_dir $tmp_dir $data_dir $ling_dir
 
+echo "Transcription type selected = $transcription..."
+
 ##
 # 1.- Create the transcriptions and wave list:
 # Note the options -f and -p: we are rejecting files with no-relevant-speech or
 # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are
 # mapped to less specific classes (see process_archimob.csv.py)
 echo "Processing $input_csv:"
-# Use -transcr option only when the original input was XML!!
-$scripts_dir/process_archimob_csv.py -i $input_csv -transcr original -f -p \
+# Use -trans option only when the original input was XML!!
+$scripts_dir/process_archimob_csv.py -i $input_csv -trans $transcription -f -p \
                      -t $output_trans -s $spn_word -n $sil_word -o $output_lst
 
 [[ $? -ne 0 ]] && echo 'Error calling process_archimob_csv.py' && exit 1

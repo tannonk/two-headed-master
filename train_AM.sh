@@ -21,7 +21,7 @@ set -u
 #                  generated with process_exmaralda_xml.py)
 #     * output_dir: folder to write the output files to
 #
-# 
+#
 #
 
 ################
@@ -41,6 +41,14 @@ num_gaussians=10000  # Number of Gaussians for the triphone stage
 # recomputing again all the stages from the very beginning.
 do_archimob_preparation=1
 do_data_preparation=1
+# ## for testing
+# do_feature_extraction=0
+# do_train_monophone=0
+# do_train_triphone=0
+# do_train_triphone_lda=0
+# do_train_mmi=0
+# do_nnet2=0
+# do_nnet2_discriminative=0
 do_feature_extraction=1
 do_train_monophone=1
 do_train_triphone=1
@@ -59,8 +67,8 @@ do_nnet2_discriminative=1
 . utils/parse_options.sh
 
 echo $0 $@
-if [[ $# -ne 3 ]]; then
-    echo "Wrong call. Should be: $0 input_csv input_wav output_dir"
+if [[ $# -lt 3 ]]; then
+    echo "Wrong call. Should be: $0 input_csv input_wav output_dir transcription"
     exit 1
 fi
 
@@ -70,6 +78,13 @@ fi
 input_csv=$1
 input_wav_dir=$2
 output_dir=$3
+transcription=${4:-orig}
+
+if [ $transcription != "orig" ] && [ $transcription != "norm" ]; then
+    echo "$transcription is an invalid transcription type."
+    echo "Transcription type must be either 'orig' (default) or 'norm'."
+    exit 1
+fi
 
 ###############
 # Intermediate:
@@ -101,7 +116,7 @@ mkdir -p $output_dir
 if [[ $do_archimob_preparation -ne 0 ]]; then
 
     archimob/prepare_Archimob_training_files.sh -s "$SPOKEN_NOISE_WORD" \
-						-n "$SIL_WORD" \
+						-n "$SIL_WORD" -t $transcription \
 						$input_csv $input_wav_dir \
 						$GRAPHEMIC_CLUSTERS \
 						$initial_data
@@ -109,6 +124,7 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     [[ $? -ne 0 ]] && echo 'Error preparing Archimob training files' && exit 1
 
 fi
+
 
 # From this moment on, all the data is organized the way Kaldi likes
 
@@ -252,4 +268,3 @@ if [[ $do_nnet2_discriminative -ne 0 ]]; then
 fi
 
 echo "Done: $0"
-

@@ -48,11 +48,11 @@ def get_args():
     parser.add_argument('--input-csv', '-i', help='Input csv file',
                         required=True)
 
-    parser.add_argument('--type-transcription', '-transcr', help='Define the' \
+    parser.add_argument('--type-transcription', '-trans', help='Define the' \
                         'the preferable type of transcriptions: original' \
-                        '(swiss) or normalizes (german)', type=str,
-                        default='original', nargs='?',
-                        choices=['original', 'normalized'])
+                        '(swiss) or normalized (~german)', type=str,
+                        default='orig', nargs='?',
+                        choices=['orig', 'norm'])
 
     parser.add_argument('--do-filtering', '-f', help='If given, exclude ' \
                         'utterances marked with no-relevant-speech or ' \
@@ -348,7 +348,7 @@ def main():
         #     continue
 
         # Check filtering:
-        if args.type_transcription in ['original', 'normalized']:
+        if args.type_transcription in ['orig', 'norm']:
             if args.do_filtering or args.test_mode:
                 if int(data_dict['anonymity']) == 1 or \
                    int(data_dict['speech_in_speech']) == 1 or \
@@ -392,7 +392,7 @@ def main():
                         'word)'.format(data_dict['utt_id'])
                 continue
 
-        if args.type_transcription == 'original':
+        if args.type_transcription == 'orig':
             if args.do_processing:
                 # Process text:
                 transcription = process_transcription(data_dict['transcription'],
@@ -402,7 +402,7 @@ def main():
                 # do this...
                 transcription = data_dict['transcription']
 
-        if args.type_transcription == 'normalized':
+        if args.type_transcription == 'norm':
             transcription = data_dict['normalized']
 
         # Write the transcriptions file:
