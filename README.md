@@ -256,7 +256,7 @@ archimob/create_vocabulary.py \
 
 ### 5) Decoding
 
-The script changed: `decode_nnet.sh`
+The script changed: `decode_nnet.sh` / `decode_nnet_ad.sh` (adapted further to supprot transcription type parameter)
 
 WHAT: instead of `references.txt` the input argument was modified to be .csv test file (created in the same way as train.csv with `archimob/process_exmaralda_xml.py`)
 
@@ -269,16 +269,17 @@ NEW:
 - input:
   - .csv as the first argument; other arguments stay unchanged.
 
+
+
 ### 6) Language Modeling
 
 The script `simple_lm.sh` now accepts the new csv as input.
 Example call:
+```
 bash ./archimob/simple_lm.sh \
-	-o 3 \
-	-c manual/clusters.txt \
-	-t original \
-	/home/tannon/processed/baseline/train.csv \
-	/home/tannon/lm/baseline/original
-
-
-
+-o 3 \
+-c manual/clusters.txt \
+-t orig \
+$(wrk_dir)/train.csv \
+$(out_dir)/lms
+```

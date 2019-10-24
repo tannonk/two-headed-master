@@ -35,7 +35,7 @@ spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 lm_order=3
 exclude_symbols=1  # If not zero, exclude spn_word and sil_word from the model
-transcription=original # If not specified, dieth transcription is used as default
+transcription=orig # If not specified, dieth transcription is used as default
 
 echo $0 $@
 while getopts 'o:c:t:h' option; do
@@ -50,7 +50,7 @@ while getopts 'o:c:t:h' option; do
 	    transcription=${OPTARG}
 	    ;;
 	h)
-	    echo "$0 [-o lm_order] [-c graphemic_clusters] input_csv output_dir"
+	    echo "$0 [-o lm_order] [-c graphemic_clusters] [-t transcription_type] input_csv output_dir"
 	    exit 0
 	    ;;
 	\?)
@@ -66,7 +66,7 @@ done
 shift $((OPTIND-1))
 
 if [[ $# -ne 2 ]]; then
-    echo "Wrong call. Should be: $0 [-o lm_order] [-c graphemic_clusters] input_csv output_dir"
+    echo "Wrong call. Should be: $0 [-o lm_order] [-c graphemic_clusters] [-t transcription_type] input_csv output_dir"
     exit 1
 fi
 
@@ -107,7 +107,7 @@ echo "Processing $input_csv:"
 $scripts_dir/process_archimob_csv.py \
 -i $input_csv \
 -p \
--transcr $transcription \
+-trans $transcription \
 -t $output_transcriptions \
 -s $spn_word \
 -n $sil_word \
