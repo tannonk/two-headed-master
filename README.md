@@ -38,10 +38,10 @@ The Kaldi recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681dcf5a55eeb2e) wa
 
 # Models (all models are evaluated with the same test set):
 
- **model**  | **WER,%** | **data** | **transcription** | **LM** |
+ **model**  | **WER,%** | **data: n interviews minus test data** | **transcription** | **LM** |
 | -------- | -------- | -------- | -------- | -------- |
 | BASELINE  | 68.00 | how many interviews?| orig | on trainning data |
-| all data + original | 54.38 | 43 interviews (minus text data) | orig | on trainning data |
+| all data + original | 54.38 | 43 interviews | orig | on trainning data |
 | all data + normalised  | ... | 43 interviews | normalised | on trainning data |
 | | | | | |
 | | | | | |
