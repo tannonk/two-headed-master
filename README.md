@@ -36,6 +36,18 @@ The Kaldi recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681dcf5a55eeb2e) wa
   - steps: general scripts related to the different steps followed in the Kaldi
     recipes.
 
+# Models (all models are evaluated with the same test set):
+
+ **model**  | **WER,%** | **data** | **transcription** | **LM** |
+| -------- | -------- | -------- | -------- | -------- |
+| BASELINE  | 68.00 | how many interviews?| orig | on trainning data |
+| all data + original | 54.38 | 43 interviews (minus text data) | orig | on trainning data |
+| all data + normalised  | ... | 43 interviews | normalised | on trainning data |
+| | | | | |
+| | | | | |
+| | | | | |
+
+
 # 18.10.19 (Iuliia)
 
 Steps:
