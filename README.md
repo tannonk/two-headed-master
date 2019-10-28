@@ -53,9 +53,9 @@ Tannon's experiments
 
 | **model**  | **WER,%** | **AM data: n utterances** | **transcription** | **LM data: n utterances** |
 | -------- | -------- | -------- | -------- | -------- |
-| BASELINE  | 68.38 | archimob r1: 40.5k | orig | 40.5k utterances |
-| BASELINE + larger LM | 65.96 | archimob r1: 40.5k | orig | archimob r2: 77.4k utterances |
-| exp1 | 54.38 | archimob r2: 77.4k | orig | archimob r2: 77.4k utterances |
+| BASELINE  | 68.38 | archimob r1: 40.5k | orig | archimob r1: 40.5k |
+| BASELINE + larger LM | 65.96 | archimob r1: 40.5k | orig | archimob r2: 77.4k |
+| exp1 | 54.38 | archimob r2: 77.4k | orig | archimob r2: 77.4k |
 <!-- | exp1  | ... | archimob r2: 77.4k | normalised | on trainning data | -->
 
 
