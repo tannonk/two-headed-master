@@ -51,7 +51,8 @@ transcription=${6:-orig}
 ###############
 # Intermediate:
 ###############
-kaldi_output_dir="$model_dir/decode"
+# kaldi_output_dir="$model_dir/decode"
+kaldi_output_dir="$output_dir/decode" # output dir for decoding is not in decode_out/ instead of model dir
 tmp_dir="$output_dir/tmp"
 lang_dir="$output_dir/lang"
 wav_lst="$tmp_dir/wav.lst"
@@ -79,7 +80,7 @@ output_lst="$tmp_dir/wav.lst"
 # # This parses any input option, if supplied.
 # . utils/parse_options.sh
 
-mkdir -p $kaldi_output_dir $output_dir $lang_dir $tmp_dir
+mkdir -p $output_dir $kaldi_output_dir $lang_dir $tmp_dir
 
 ##
 # 1.- Create the transcriptions and wave list:
@@ -128,7 +129,7 @@ if [[ $do_decoding -ne 0 ]]; then
 
     rm -rf $kaldi_output_dir/*
     uzh/decode.sh --cmd "$decode_cmd" --nj $num_jobs $graph_dir \
-        $lang_dir $kaldi_output_dir
+        $lang_dir $kaldi_output_dir $model_dir
 
     [[ $? -ne 0 ]] && echo 'Error decoding' && exit 1
 

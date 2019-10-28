@@ -32,8 +32,8 @@ echo "$0 $@"  # Print the command line for logging
 [ -f ./path.sh ] && . ./path.sh; # source the path.
 . parse_options.sh || exit 1;
 
-if [ $# -ne 3 ]; then
-  echo "Usage: $0 [options] <graph-dir> <data-dir> <decode-dir>"
+if [ $# -ne 4 ]; then
+  echo "Usage: $0 [options] <graph-dir> <data-dir> <decode-dir> <model-dir>"
   echo " e.g.: $0 --transform-dir exp/tri3b/decode_dev93_tgpr \\"
   echo "      exp/tri3b/graph_tgpr data/test_dev93 exp/tri4a_nnet/decode_dev93_tgpr"
   echo "main options (for others, see top of script file)"
@@ -53,7 +53,8 @@ fi
 graphdir=$1
 data=$2
 dir=$3
-srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory.
+# srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory.
+srcdir=$4 # specify model directory explicitly to allow decoding to be written to decode out directory
 model=$srcdir/$iter.mdl
 
 
