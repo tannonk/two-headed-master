@@ -38,7 +38,9 @@ The Kaldi recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681dcf5a55eeb2e) wa
 
 # Models (all models are evaluated with the same test set):
 
- **model**  | **WER,%** | **data: n interviews (minus test data)** | **transcription** | **LM** |
+Iuliia's experiments
+
+| **model**  | **WER,%** | **data: n interviews (minus test data)** | **transcription** | **LM** |
 | -------- | -------- | -------- | -------- | -------- |
 | BASELINE  | 68.00 | how many interviews?| orig | on trainning data |
 | all data + original | 54.38 | 43 interviews | orig | on trainning data |
@@ -46,6 +48,19 @@ The Kaldi recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681dcf5a55eeb2e) wa
 | | | | | |
 | | | | | |
 | | | | | |
+
+Tannon's experiments
+
+| **model**  | **WER,%** | **AM data: n utterances** | **transcription** | **LM data: n utterances** |
+| -------- | -------- | -------- | -------- | -------- |
+| BASELINE  | 68.38 | archimob r1: 40.5k | orig | 40.5k utterances |
+| BASELINE  | 65.96 | archimob r1: 40.5k | orig | archimob r2: 77.4k utterances |
+| exp1 | 54.38 | archimob r2: 77.4k | orig | archimob r2: 77.4k utterances |
+<!-- | exp1  | ... | archimob r2: 77.4k | normalised | on trainning data | -->
+| | | | | |
+| | | | | |
+| | | | | |
+
 
 
 # 18.10.19 (Iuliia)
