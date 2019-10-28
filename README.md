@@ -280,20 +280,18 @@ archimob/create_vocabulary.py \
 
 ### 5) Decoding
 
-The script changed: `decode_nnet.sh` / `decode_nnet_ad.sh` (adapted further to supprot transcription type parameter)
-
-WHAT: instead of `references.txt` the input argument was modified to be .csv test file (created in the same way as train.csv with `archimob/process_exmaralda_xml.py`)
-
-OLD:
-- `decode_nnet.sh` takes the `references.txt`, a file with a list of all test transcriptions and corresponding IDs, as one of its input arguments.
+The script changed: `decode_nnet.sh` (adapted further to supprot transcription type parameter)
 
 NEW:
-- Not to create the `references.txt` file manually before the decoding is run, the `decode_nnet.sh` was modified.
-- Now as an input argument, which would contain test transcription info, .csv test file instead of `references.txt` is taken (.csv for test data is created with the same script that is used for .csv train file: `archimob/process_exmaralda_xml.py`).
+- the input argument was modified to accept the .csv test file (created in the same way as train.csv with `archimob/process_exmaralda_xml.py`) instead of the intermediate file `references.txt`.
+- the system output transcriptions are now written to the output directory specified as a command line argument when calling `decode_nnet.sh`.
+
+OLD:
+- `decode_nnet.sh` takes the `references.txt`, an intermediate file with a list of all test transcriptions and corresponding IDs, as one of its input arguments.
+- previously `decode_nnet.sh` wrote system transcriptions to the model directory, e.g. `/am_out/models/discriminative/nnet_disc/decode/`, however this makes it difficult to attain multiple decodings given the same trained acoustic models.
+
 - input:
   - .csv as the first argument; other arguments stay unchanged.
-
-
 
 ### 6) Language Modeling
 
