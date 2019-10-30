@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 """
 Script that takes as input a list of Exmaralda or XML transcription files and
@@ -33,7 +34,7 @@ def get_args():
     parser.add_argument('--input-annotation', '-i', help='Input XML/ EXB files',
                         nargs='+', required=True)
 
-    parser.add_argument('--input-format', '-format', help='XML or EXB',
+    parser.add_argument('--input-format', '-f', help='XML or EXB',
                         const='exb', nargs='?', choices=['exb', 'xml'],
                         type=str, required=True)
 
@@ -181,7 +182,7 @@ def chunk_transcriptions(root, chunk_basename,
             swiss_utterance = []
 
             for word in u.findall('{' + namespace + '}w'):
-                if word.text is not None:
+                if word.text is not None and word.attrib.get('normalised').encode('utf-8') != u'==':
                     norm_utterance.append(word.attrib.get('normalised').encode('utf-8'))
                     swiss_utterance.append(word.text.encode('utf-8'))
 
@@ -281,9 +282,9 @@ def write_chunk_transcriptions(chunk_list, overlap_dict,
 
             output_f.write('{0},'.format(overlap))
 
-        output_f.write('{0}'.format(no_relevant_speech))
+        output_f.write('{0}\n'.format(no_relevant_speech))
 
-        output_f.write('\n')
+        # output_f.write('\n')
 
 
 def extract_wave_chunks(chunk_list, wave_in, output_dir):

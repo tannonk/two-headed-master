@@ -51,11 +51,13 @@ Iuliia's experiments
 
 Tannon's experiments
 
-| **model**  | **WER,%** | **AM data: n utterances** | **transcription** | **LM data: n utterances** |
-| -------- | -------- | -------- | -------- | -------- |
-| BASELINE  | 68.38 | archimob r1: 40.5k | orig | archimob r1: 40.5k |
-| BASELINE + larger LM | 65.96 | archimob r1: 40.5k | orig | archimob r2: 77.4k |
-| exp1 | 54.38 | archimob r2: 77.4k | orig | archimob r2: 77.4k |
+| **model**  | **Best WER,%** | **AM data: n utterances** | **transcription** | **LM data: n utterances** | **LM perplexity** |
+| -------- | -------- | -------- | -------- | -------- | -------- |
+| BASELINE  | 68.38 | archimob r1: 40.5k | orig | archimob r1: 40.5k |  |
+| BASELINE + larger LM | 65.96 | archimob r1: 40.5k | orig | archimob r2: 77.4k |  |
+| BASELINE + archi_noah LM | 66.14 | archimob r1: 40.5k | orig | archimob r2, NOAH corpus: 82.4k |  |
+| BASELINE + archi_noah_lcc LM  | 67.53  | archimob r1: 40.5k | orig | archimob r2, NOAH corpus, LCC2017: 182k |  |
+| exp1 | 54.38 | archimob r2: 77.4k | orig | archimob r2: 77.4k |  |
 <!-- | exp1  | ... | archimob r2: 77.4k | normalised | on trainning data | -->
 
 
@@ -71,24 +73,25 @@ Steps:
 - run `decode_nnet.sh`
 
 Running example with approximate cmds:
+
 1. XML to .csv
 
     ```
-    python /home/code_base/archimob/process_exmaralda_xml.py \
+    python archimob/process_exmaralda_xml.py \
     -i /home/ubuntu/data/archimob_r2/train_xml/*.xml \
-    -format xml \
-    -o /home/../data/processed/archimob.csv
+    -f xml \
+    -o /home/../data/processed/archimob_r2.csv
     ```
 
-    1.2. rename chunked wavs **Note**: This only needs to be done once!
+    <!-- 1.2. rename chunked wavs **Note**: This only needs to be done once!
 
     ```
     python /home/code_base/archimob/rename_wavs.py \
     -i /home/../data/processed/archimob.csv \
     -chw /home/ubuntu/data/archimob_r2/audio
-    ```
+    ``` -->
 
-    1.3. split train and test sets according to the test set utterances in JSON file
+    1.2 split train and test sets according to the test set utterances in JSON file
     ```
     python /home/code_base/archimob/split_data.py \
     -i /home/.../data/processed/archimob.csv \
@@ -129,7 +132,7 @@ Running example with approximate cmds:
     -o /home/.../data/processed/vocabulary_train.txt
     ```
 
-5. Lingware (no need of nohup actually, as it is fast...)
+5. Lingware (no need for nohup actually, as it is fast...)
     ```
     nohup /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/compile_lingware.sh \
     out_AM/initial_data/ling \
@@ -162,7 +165,7 @@ FILES THAT HAVE BEEN CHANGED for this step:
 `archimob/process_exmaralda_xml.py`
 
 NEW:
-- A new argument, which defines the format of the input (EXB or XML) was introduced: `--input-format (-format)`.
+- A new argument, which defines the format of the input (EXB or XML) was introduced: `--input-format (-f)`.
 OLD:
 - input:
   - mandatory input is transcription files in EXB (Exmaralda) format
@@ -180,11 +183,11 @@ archimob/process_exmaralda_xml.py \
 ```
 
 NEW:
-- A new argument is introduced: `--input-format (-format)`, which allows the choice of the input EXB or XML formats.
+- A new argument is introduced: `--input-format (-f)`, which allows the choice of the input EXB or XML formats.
 
 - input:
-  - a) `-format exb` for transcription files in EXB (Exmaralda) format — the same as in the old version (is still default!!).
-  - b) `-format xml` for transcription files in XML format.
+  - a) `-f exb` for transcription files in EXB (Exmaralda) format — the same as in the old version (is still default!!).
+  - b) `-f xml` for transcription files in XML format.
 
 - output:
   - a) for EXB, the same .csv output as in the old version
