@@ -406,7 +406,7 @@ def main():
             transcription = data_dict['normalized']
 
         # Write the transcriptions file:
-	output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
+        output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
                                            transcription.encode('utf8')))
 
         # Write the utterance list:

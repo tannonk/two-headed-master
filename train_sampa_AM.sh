@@ -42,12 +42,12 @@ num_gaussians=10000  # Number of Gaussians for the triphone stage
 do_archimob_preparation=1
 do_data_preparation=1
 do_feature_extraction=1
-do_train_monophone=1
-do_train_triphone=1
-do_train_triphone_lda=1
-do_train_mmi=1
-do_nnet2=1
-do_nnet2_discriminative=1
+do_train_monophone=0
+do_train_triphone=0
+do_train_triphone_lda=0
+do_train_mmi=0
+do_nnet2=0
+do_nnet2_discriminative=0
 
 # This call selects the tool used for parallel computing: ($train_cmd)
 . cmd.sh
@@ -70,11 +70,17 @@ fi
 input_csv=$1
 input_wav_dir=$2
 output_dir=$3
-transcription=${4:-orig}
+transcription=${4:-"orig"}
+pron_lexicon=${5:-""}
 
 if [ $transcription != "orig" ] && [ $transcription != "norm" ]; then
     echo "$transcription is an invalid transcription type."
     echo "Transcription type must be either 'orig' (default) or 'norm'."
+    exit 1
+fi
+
+if [ $transcription = "norm" ] && [ ! -e $pron_lexicon ]; then
+    echo "Error: missing $pron_lexicon which is required when working with normalised transcriptions. Either SAMPA dictionary or dieth dictionary should be applied."
     exit 1
 fi
 
@@ -108,7 +114,7 @@ mkdir -p $output_dir
 if [[ $do_archimob_preparation -ne 0 ]]; then
 
     archimob/prepare_Archimob_training_files.sh -s "$SPOKEN_NOISE_WORD" \
-						-n "$SIL_WORD" -t $transcription \
+						-n "$SIL_WORD" -t $transcription -p $pron_lexicon \
 						$input_csv $input_wav_dir \
 						$GRAPHEMIC_CLUSTERS \
 						$initial_data

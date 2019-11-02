@@ -39,9 +39,9 @@ num_gaussians=10000  # Number of Gaussians for the triphone stage
 #####################################
 ## This is helpful when running an experiment in several steps, to avoid
 # recomputing again all the stages from the very beginning.
-do_archimob_preparation=1
-do_data_preparation=1
-do_feature_extraction=1
+do_archimob_preparation=0
+do_data_preparation=0
+do_feature_extraction=0
 do_train_monophone=1
 do_train_triphone=1
 do_train_triphone_lda=1
@@ -70,11 +70,17 @@ fi
 input_csv=$1
 input_wav_dir=$2
 output_dir=$3
-transcription=${4:-orig}
+transcription=${4:-"orig"}
+norm2dieth=${5:-""}
 
 if [ $transcription != "orig" ] && [ $transcription != "norm" ]; then
     echo "$transcription is an invalid transcription type."
     echo "Transcription type must be either 'orig' (default) or 'norm'."
+    exit 1
+fi
+
+if [ $transcription = "norm" ] && [ ! -e $norm2dieth ]; then
+    echo "Error: missing $norm2dieth which is required when working with normalised transcriptions. Either SAMPA dictionary or dieth dictionary should be applied."
     exit 1
 fi
 
@@ -108,7 +114,7 @@ mkdir -p $output_dir
 if [[ $do_archimob_preparation -ne 0 ]]; then
 
     archimob/prepare_Archimob_training_files.sh -s "$SPOKEN_NOISE_WORD" \
-						-n "$SIL_WORD" -t $transcription \
+						-n "$SIL_WORD" -t $transcription -p $norm2dieth \
 						$input_csv $input_wav_dir \
 						$GRAPHEMIC_CLUSTERS \
 						$initial_data

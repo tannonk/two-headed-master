@@ -27,9 +27,11 @@ scripts_dir=`dirname $0`
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 transcription='orig'
+norm2dieth=''
+pron_lex=''
 
 echo $0 $@
-while getopts 's:n:t:h' option; do
+while getopts 's:n:t:d:p:h' option; do
     case $option in
 	s)
 	    spn_word=${OPTARG}
@@ -39,6 +41,12 @@ while getopts 's:n:t:h' option; do
 	    ;;
 	t)
 	    transcription=${OPTARG} # allows to select original (orig) or normalised (norm)
+	    ;;
+  d)
+	    norm2dieth=${OPTARG} # allows to select original (orig) or normalised (norm)
+	    ;;
+  p)
+	    pron_lex=${OPTARG} # allows to select original (orig) or normalised (norm)
 	    ;;
 	h)
 	    echo "$0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] input_csv graphemic_clusters output_dir"
@@ -135,11 +143,36 @@ cut -f 2 $output_trans | perl -pe 's#\s+#\n#g' | grep -v -P '^$|<' | sort -u | \
      sort -o $vocabulary
 
 # 3.2.- Second, the lexicon:
-echo "Generating the lexicon: $output_lexicon"
-$scripts_dir/create_simple_lexicon.py -v $vocabulary -c $input_clusters \
-				      -o $output_lexicon
+if [[ $transcription = "norm" ]]; then
 
-[[ $? -ne 0 ]] && echo 'Error calling create_simple_lexicon.py' && exit 1
+  if [[ ! -z $pron_lex ]] && [[ ! -e $pron_lex ]]; then
+    echo "Generating the lexicon for with SAMPA transcriptions: $output_lexicon"
+    $scripts_dir/create_sampa_normalised_lexicon.py -v $vocabulary \
+                  -s $pron_lex -o $output_lexicon
+    [[ $? -ne 0 ]] && echo 'Error calling create_dieth_normalised_lexicon.py' && exit 1
+
+  elif [[ ! -z $norm2dieth ]] && [[ ! -e $norm2dieth ]]; then
+    echo "Generating the lexicon for with Dieth transcriptions: $output_lexicon"
+    $scripts_dir/create_dieth_normalised_lexicon.py -v $vocabulary -c $input_clusters \
+                  --n2d $norm2dieth -o $output_lexicon
+
+    [[ $? -ne 0 ]] && echo 'Error calling create_dieth_normalised_lexicon.py' && exit 1
+
+
+  else
+    "Error: could not get pronunciation files..." && exit 1
+
+  fi
+
+else
+
+  echo "Generating the lexicon for original transcription: $output_lexicon"
+  $scripts_dir/create_simple_lexicon.py -v $vocabulary -c $input_clusters \
+  				      -o $output_lexicon
+
+  [[ $? -ne 0 ]] && echo 'Error calling create_simple_lexicon.py' && exit 1
+
+fi
 
 ##
 # 4.- Create nonsilence_phones.txt:

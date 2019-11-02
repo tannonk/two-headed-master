@@ -8,13 +8,14 @@ phone
 """
 
 import sys
-
 import re
 import argparse
 import unicodedata
+import json
+import codecs
 
 # Signs to exclude from the transcriptions (when --add-signs is not specified)
-EXCLUDE_SET = set(["'", '-', '.'])
+EXCLUDE_SET = set(["'", '-', '.', '==', '***'])
 
 def get_args():
     """
@@ -32,12 +33,16 @@ def get_args():
     parser.add_argument('--cluster-file', '-c', help='File with the consonant' \
                         ' clusters', required=True)
 
+    parser.add_argument('--n2d', required=True, help='Normalised to Dieth transcription mapping. JSON file is expected')
+
     parser.add_argument('--map-diacritic', '-m', help='Map compound ' \
                         'diacritics to alternative character. If null, ' \
                         'just recombines', default=u'1')
 
     parser.add_argument('--output-file', '-o', help='Output lexicon',
                         required=True)
+
+    parser.add_argument('--verbose', required=False, action='store_true', help='Print progress to stdout.')
 
     args = parser.parse_args()
 
@@ -160,7 +165,7 @@ def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None):
         * a string with a pseudo phonetic transcription of the input word
     """
 
-    verbose = True
+    verbose = False
     word = ProcessUnicodeCompounds(word, map_diacritic)
     word_length = len(word)
 
@@ -251,6 +256,13 @@ def main():
             max_length_cluster = len(clust)
 
     try:
+        norm2dieth_file = codecs.open(args.n2d, 'r', encoding='utf8')
+        n2d_map = json.load(norm2dieth_file)
+    except IOError as err:
+        sys.stderr.write('Error opening {0} ({1})\n'.format(args.n2d, err))
+        sys.exit(1)
+
+    try:
         input_f = open(args.vocabulary, 'r')
     except IOError as err:
         sys.stderr.write('Error opening {0} ({1})\n'.format(args.vocabulary,
@@ -264,19 +276,28 @@ def main():
                                                              err))
         sys.exit(1)
 
+    seen_pairs = set()
+
     for word in input_f:
 
         word = word.rstrip().decode('utf8')
+        # print word
         if isinstance(args.map_diacritic, str):
+            print args.map_diacritic
             args.map_diacritic = args.map_diacritic.decode('utf8')
 
-        transcription = transcribe_simple(word.lower(), clusters,
-                                          max_length_cluster,
-                                          args.map_diacritic)
+        dieth_forms = n2d_map.get(word)
+        # print dieth_forms
+        for form in set(dieth_forms):
+            transcription = transcribe_simple(form.lower(), clusters,
+                                              max_length_cluster,
+                                              args.map_diacritic)
 
-        for multi in transcription:
-            output_f.write('{0} {1}\n'.format(word.encode('utf8'),
-                                              multi.encode('utf8')))
+            # print transcription
+            for multi in transcription:
+                if (word, multi) not in seen_pairs:
+                    output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
+                    seen_pairs.add((word, multi))
 
     output_f.close()
     input_f.close()
