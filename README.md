@@ -76,45 +76,28 @@ Running example with approximate cmds:
 
 1. XML to .csv
 
-    ```
-    python archimob/process_exmaralda_xml.py \
-    -i /home/ubuntu/data/archimob_r2/train_xml/*.xml \
-    -f xml \
-    -o /home/../data/processed/archimob_r2.csv
-    ```
+```
+python archimob/process_exmaralda_xml.py \
+-i /home/ubuntu/data/archimob_r2/train_xml/*.xml \
+-f xml \
+-o /home/../data/processed/archimob_r2.csv
+```
 
-    <!-- 1.2. rename chunked wavs **Note**: This only needs to be done once!
+1.2 ensure that the filtering of utterances corresponds to the audio files available.
 
-    ```
-    python /home/code_base/archimob/rename_wavs.py \
-    -i /home/../data/processed/archimob.csv \
-    -chw /home/ubuntu/data/archimob_r2/audio
-    ``` -->
+```
+python archimob/sync_csv_wav.py \
+-i /home/../data/processed/archimob.csv \
+-chw /home/ubuntu/data/archimob_r2/audio
+```
 
-    1.2 split train and test sets according to the test set utterances in JSON file
-    ```
-    python /home/code_base/archimob/split_data.py \
-    -i /home/.../data/processed/archimob.csv \
-    -o /home/.../data/processed \
-    -t /home/ubuntu/data/archimob_r2/meta_info/test_set.json
-    ```
-
-    <!-- for train:
-
-    ```
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py \
-    -i /home/.../data/original/train_xml/*.xml \
-    -format xml \
-    -o /home/.../data/processed/train.csv
-    ```
-
-    for test:
-    ```
-    /home/.../kaldi_wrk_dir/spitch_kaldi_UZH/archimob/process_exmaralda_xml.py \
-    -i /home/../data/original/test_xml/*.xml \
-    -format xml \
-    -o /home/.../data/processed/test.csv
-    ``` -->
+1.3 split train and test sets according to the test set utterances in JSON file
+```
+python archimob/split_data.py \
+-i /home/.../data/processed/archimob.csv \
+-o /home/.../data/processed \
+-t /home/ubuntu/data/archimob_r2/meta_info/test_set.json
+  ```
 
 3. Training AM
 
