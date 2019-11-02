@@ -20,6 +20,7 @@ import wave
 from archimob_chunk import ArchiMobChunkEXB, ArchiMobChunkXML
 from extract_wav_segment import extract_segment
 
+ignored_normalised_forms = ['==', '', ' ', 'DELETED']
 
 def get_args():
     """
@@ -49,6 +50,8 @@ def get_args():
     parser.add_argument('--output-wav-dir', '-O', help='Output folder for the' \
                         ' chunked wavefiles. If not given, the wavefiles are' \
                         'just ignored', default='')
+
+    parser.add_argument('--verbose', required=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -82,7 +85,7 @@ def get_timepoints(root):
 
 def chunk_transcriptions(root, chunk_basename,
                          input_format, namespace=None,
-                         time_dict=None):
+                         time_dict=None, verbose=False):
     """
     Extracts from the XML / EXB file the events from each tier, and creates
     chunks out of them.
@@ -94,8 +97,6 @@ def chunk_transcriptions(root, chunk_basename,
         * a tuple with the list of chunks and the dictionary with the chunks
           that begin in each timepoint (used for overlapping)
     """
-
-    verbose = False
 
     chunk_list = []
     overlap_dict = {}
@@ -182,8 +183,14 @@ def chunk_transcriptions(root, chunk_basename,
             swiss_utterance = []
 
             for word in u.findall('{' + namespace + '}w'):
-                if word.text is not None and word.attrib.get('normalised').encode('utf-8') != u'==':
-                    norm_utterance.append(word.attrib.get('normalised').encode('utf-8'))
+                if word.text is not None and word.attrib.get('normalised').encode('utf-8') not in ignored_normalised_forms:
+
+                    # glue multi-token forms, e.g. new york --> new_york
+                    norm_form = word.attrib.get('normalised').encode('utf-8')
+                    norm_form = norm_form.strip()
+                    norm_form = re.sub(r'\s+', r'_', norm_form)
+
+                    norm_utterance.append(norm_form)
                     swiss_utterance.append(word.text.encode('utf-8'))
 
             # Create the chunk object:
@@ -200,8 +207,8 @@ def chunk_transcriptions(root, chunk_basename,
                                          current_spk,
                                          event_start)
 
-            # if verbose:
-            print '\tNew event: {0}'.format(new_chunk)
+            if verbose:
+                print '\tNew event: {0}'.format(new_chunk)
 
             # Add the chunk to the output list:
             chunk_list.append(new_chunk)
@@ -363,7 +370,7 @@ def main():
 
             (chunk_list, overlap_dict) = chunk_transcriptions(root, basename,
                                                               args.input_format,
-                                                              time_dict)
+                                                              time_dict, args.verbose)
 
             write_chunk_transcriptions(chunk_list, overlap_dict,
                                        args.input_format, output_f)
@@ -394,10 +401,10 @@ def main():
 
         elif args.input_format == 'xml':
             namespace = root.tag.split('}')[0].strip('{')
-            print namespace
+            # print namespace
             (chunk_list, overlap_dict) = chunk_transcriptions(root, basename,
                                                               args.input_format,
-                                                              namespace)
+                                                              namespace, args.verbose)
             write_chunk_transcriptions(chunk_list, overlap_dict,
                                        args.input_format, output_f)
 
