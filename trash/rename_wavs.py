@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """
 Script takes as input a csv file with transcriptions and directory with
@@ -6,17 +6,17 @@ chuncked wavefiles, and renames wavefiles to make them correspond to the
 transcription and to the Kaldi.
 input: .csv, wav-dir
 
-rename_wavs.py -i train.csv -chw wav_train
+Example call:
+    sync_csv_wav.py -i archimob.csv -chw archimob_audio
 """
 
 import os
 import os.path
 import shutil
-
 import argparse
 import csv
 import re
-
+from collections import OrderedDict
 
 def get_args():
     """
@@ -31,8 +31,8 @@ def get_args():
     parser.add_argument('--input-csv', '-i', help='Input csv file',
                         nargs='?', required=True)
 
-    parser.add_argument('--chuncked-wav-dir', '-chw', help='Folder with the'
-                        'chuncked wavefiles if they already exit but should'
+    parser.add_argument('--chuncked-wav-dir', '-chw', help='Folder with the' \
+                        'chuncked wavefiles if they already exit but should' \
                         'be renamed', required=True)
 
     args = parser.parse_args()
@@ -49,13 +49,14 @@ def main():
     args = get_args()
     directory = args.chuncked_wav_dir
     input_csvfile = args.input_csv
-    # directory = "/Users/inigma/Documents/UZH_Master/MasterThesis/data/ArchiMob/test_audio/"
-    # input_csvfile = "/Users/inigma/Documents/UZH_Master/MasterThesis/KALDI/kaldi_wrk_dir/data/try_train.csv"
 
     annotation_dictionary = []
 
     with open(input_csvfile, 'r') as csvfile:
-        csv_annotation = csv.DictReader(csvfile, delimiter=',')
+
+        csv_annotation = csv.reader(csvfile, delimiter=',')
+
+        header = next(csv_annotation)
 
         prev_audio = ''
         prev_id = ''
@@ -63,7 +64,10 @@ def main():
         n_transcription_only = 0
         n_audio_only = 0
 
-        for phrase in csv_annotation:
+        for phrase in csv_annotation: # phrase == row in csv file
+
+            phrase = OrderedDict(zip(header, phrase))
+
             current_id = phrase['utt_id']
             # if not renamed yet
             current_audio = re.sub('-', '_', phrase['audio_id'])
@@ -84,9 +88,7 @@ def main():
                         os.rename(curr_audio_unrenamed, target_name)
                     else:
                         n_overlap += 1
-                        print("WARNING: {} and {} refer to the same audio {}.".format(prev_id,
-                                                                                      current_id,
-                                                                                      current_audio))
+                        print("WARNING: {} and {} refer to the same audio {}.".format(prev_id,current_id,current_audio))
                 else:
                     n_transcription_only += 1
                     phrase['missing_audio'] = '1'
