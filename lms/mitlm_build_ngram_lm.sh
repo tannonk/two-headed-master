@@ -17,12 +17,11 @@ set -u
 #
 # Optional parameters:
 # -o language model order
-# -t test_file
+# -t test_file (should be a one-sentence-per-line text file)
 
 ################
 # Configuration:
 ################
-
 lm_order=3
 test_file=
 
