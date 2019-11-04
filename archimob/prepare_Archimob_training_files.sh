@@ -27,11 +27,10 @@ scripts_dir=`dirname $0`
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 transcription='orig'
-norm2dieth=''
 pron_lex=''
 
 echo $0 $@
-while getopts 's:n:t:d:p:h' option; do
+while getopts 's:n:t:p:h' option; do
     case $option in
 	s)
 	    spn_word=${OPTARG}
@@ -41,9 +40,6 @@ while getopts 's:n:t:d:p:h' option; do
 	    ;;
 	t)
 	    transcription=${OPTARG} # allows to select original (orig) or normalised (norm)
-	    ;;
-  d)
-	    norm2dieth=${OPTARG} # allows to select original (orig) or normalised (norm)
 	    ;;
   p)
 	    pron_lex=${OPTARG} # allows to select original (orig) or normalised (norm)
@@ -64,8 +60,8 @@ while getopts 's:n:t:d:p:h' option; do
 done
 shift $((OPTIND-1))
 
-if [[ $# -ne 4 ]]; then
-    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-t 'orig'/'norm'] input_csv input_wav_dir graphemic_clusters output_dir"
+if [[ $# -lt 4 ]]; then
+    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-t 'orig'/'norm'] [-p pronunciation lexicon] input_csv input_wav_dir graphemic_clusters output_dir"
     exit 1
 fi
 
@@ -98,12 +94,12 @@ output_optional_silence="$ling_dir/optional_silence.txt"
 output_questions="$ling_dir/extra_questions.txt"
 
 for f in $input_csv $input_clusters; do
-    [[ ! -e $f ]] && echo "Error: missing input file $f" && exit 1
+    [[ ! -e $f ]] && echo -e "\n\tERROR: missing input file $f" && exit 1
 done
 
 mkdir -p $output_dir $tmp_dir $data_dir $ling_dir
 
-echo "Transcription type selected = $transcription..."
+echo -e "\nTRANSCRIPTION TYPE = $transcription\n"
 
 ##
 # 1.- Create the transcriptions and wave list:
@@ -115,7 +111,7 @@ echo "Processing $input_csv:"
 $scripts_dir/process_archimob_csv.py -i $input_csv -trans $transcription -f -p \
                      -t $output_trans -s $spn_word -n $sil_word -o $output_lst
 
-[[ $? -ne 0 ]] && echo 'Error calling process_archimob_csv.py' && exit 1
+[[ $? -ne 0 ]] && echo -e "\n\tERROR calling process_archimob_csv.py" && exit 1
 
 # Sort them the way Kaldi likes it:
 sort $output_trans -o $output_trans
@@ -126,7 +122,7 @@ sort $output_lst -o $output_lst
 $scripts_dir/create_secondary_files.py -w $input_wav_dir -o $data_dir \
 				       train -i $input_csv -l $output_lst \
 
-[[ $? -ne 0 ]] && echo 'Error calling create_secondary_files.py' && exit 1
+[[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_secondary_files.py" && exit 1
 
 # Sort the utterance to speaker and the wav scp files the way Kaldi likes:
 sort $data_dir/wav.scp -o $data_dir/wav.scp
@@ -145,32 +141,44 @@ cut -f 2 $output_trans | perl -pe 's#\s+#\n#g' | grep -v -P '^$|<' | sort -u | \
 # 3.2.- Second, the lexicon:
 if [[ $transcription = "norm" ]]; then
 
-  if [[ ! -z $pron_lex ]] && [[ ! -e $pron_lex ]]; then
-    echo "Generating the lexicon for with SAMPA transcriptions: $output_lexicon"
-    $scripts_dir/create_sampa_normalised_lexicon.py -v $vocabulary \
-                  -s $pron_lex -o $output_lexicon
-    [[ $? -ne 0 ]] && echo 'Error calling create_dieth_normalised_lexicon.py' && exit 1
+  if [[ $pron_lex == *"sampa"* ]]; then
 
-  elif [[ ! -z $norm2dieth ]] && [[ ! -e $norm2dieth ]]; then
-    echo "Generating the lexicon for with Dieth transcriptions: $output_lexicon"
-    $scripts_dir/create_dieth_normalised_lexicon.py -v $vocabulary -c $input_clusters \
-                  --n2d $norm2dieth -o $output_lexicon
+    echo "Generating the lexicon with SAMPA transcriptions: $output_lexicon"
+    # specify python3 for script to create sampa lexicon
+    python3 $scripts_dir/create_sampa_normalised_lexicon.py \
+      -v $vocabulary \
+      -s $pron_lex \
+      -o $output_lexicon
 
-    [[ $? -ne 0 ]] && echo 'Error calling create_dieth_normalised_lexicon.py' && exit 1
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_sampa_normalised_lexicon.py" && exit 1
 
+  elif [[ $pron_lex == *"dieth"* ]]; then
+
+    echo "Generating the lexicon with Dieth transcriptions: $output_lexicon"
+
+    $scripts_dir/create_dieth_normalised_lexicon.py \
+      -v $vocabulary \
+      -c $input_clusters \
+      -d $pron_lex \
+      -o $output_lexicon
+
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_dieth_normalised_lexicon.py" && exit 1
 
   else
-    "Error: could not get pronunciation files..." && exit 1
+
+    echo -e "\n\tERROR: could not get pronunciation files. Niether Dieth nor SAMPA was found.\n" && exit 1
 
   fi
 
 else
 
   echo "Generating the lexicon for original transcription: $output_lexicon"
-  $scripts_dir/create_simple_lexicon.py -v $vocabulary -c $input_clusters \
-  				      -o $output_lexicon
+  $scripts_dir/create_simple_lexicon.py \
+    -v $vocabulary \
+    -c $input_clusters \
+    -o $output_lexicon
 
-  [[ $? -ne 0 ]] && echo 'Error calling create_simple_lexicon.py' && exit 1
+  [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_simple_lexicon.py" && exit 1
 
 fi
 
@@ -182,8 +190,7 @@ fi
 # naive way of generating the pronunciations from the Dieth data: everything
 # not appearing in the clusters file is just mapped to itself.
 echo "Extracting the phoneset: $output_phoneset"
-cut -d' ' -f 2- $output_lexicon | perl -pe 's#\s+#\n#g' | sort -u | \
-    sort -o $output_phoneset
+cut -d' ' -f 2- $output_lexicon | perl -pe 's#\s+#\n#g' | sort -u > $output_phoneset
 
 ##
 # 5.- Create the silence list:
@@ -195,19 +202,18 @@ echo SIL > $output_optional_silence
 
 ##
 # 7.- The extra questions for tree building:
-cat $output_silences | awk ' { printf("%s ", $1) } END { printf "\n" } ' > \
-    $output_questions
+cat $output_silences | awk ' { printf("%s ", $1) } END { printf "\n" } ' > $output_questions
 
 ##
 # 8.- Add to the lexicon the mapping for the silence word:
-echo -e "$sil_word SIL\n$spn_word SPN" | cat - $output_lexicon | \
-    sort -o $output_lexicon
+echo -e "$sil_word SIL\n$spn_word SPN" | cat - $output_lexicon | sort -o $output_lexicon
 
 ##
 # 9.- Safety remove:
-# This will force Kaldi recomputing the lexicon (it creates it in the source
+# This will force Kaldi to recompute the lexicon (it creates it in the source
 # folder, in prepare_lang.sh)
-
 rm -rf $tmp_lexiconp
 
-echo "Done: $0"
+echo ""
+echo "### DONE: $0 ###"
+echo ""

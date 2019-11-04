@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-#! -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 This program creates a lexicon using SAMPA transcriptions.
@@ -10,6 +10,7 @@ Example call:
 """
 
 import sys
+import re
 import argparse
 from pathlib import Path
 import json
@@ -47,6 +48,8 @@ def write_lexicon(vocab, outfile, sampa_dict):
     no_pron = Counter()
     line_c = 0
     c = 0
+    seen_pairs = set()
+
     with open(vocab, 'r', encoding='utf8') as inf, open(outfile, 'w', encoding='utf8') as outf:
         for line in inf:
             line_c += 1
@@ -55,25 +58,24 @@ def write_lexicon(vocab, outfile, sampa_dict):
             if prons:
                 c += 1
                 for pron in prons:
-                    outf.write('{} {}\n'.format(vocab_word, pron))
+                    pron = re.sub(r'\s?_\s?', ' ', pron) # remove joining underscore from SAMPA pronunciation
+
+                    # avoid duplicates in lexicon!
+                    if not (vocab_word, pron) in seen_pairs:
+                        outf.write('{} {}\n'.format(vocab_word, pron))
+                        seen_pairs.add((vocab_word, pron))
+
             else:
                 no_pron[vocab_word] += 1
 
     print('{} items in vocabulary of length {} have at least 1 pronunciation. ({:.2f}%)'.format(c, line_c, c/line_c*100))
-
-    #
-    # with open(overflow_file, 'w', encoding='utf8') as overflow:
-    #     print('Writing overflow words to {}'.format(overflow_file))
-    #     for k, v in no_pron.items():
-    #         overflow.write('{}\t{}\n'.format(k, v))
-
 
 def main():
 
     args = get_args()
 
     with open(args.sampa_file, 'r', encoding='utf8') as f:
-        sampa_dict = json.load(f, encoding='utf8')
+        sampa_dict = json.load(f)
 
     write_lexicon(args.vocabulary, args.outfile, sampa_dict)
 

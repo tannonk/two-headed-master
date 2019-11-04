@@ -33,7 +33,7 @@ def get_args():
     parser.add_argument('--cluster-file', '-c', help='File with the consonant' \
                         ' clusters', required=True)
 
-    parser.add_argument('--n2d', required=True, help='Normalised to Dieth transcription mapping. JSON file is expected')
+    parser.add_argument('--n2d', '-d', required=True, help='Normalised to Dieth transcription mapping. JSON file is expected')
 
     parser.add_argument('--map-diacritic', '-m', help='Map compound ' \
                         'diacritics to alternative character. If null, ' \
@@ -258,6 +258,7 @@ def main():
     try:
         norm2dieth_file = codecs.open(args.n2d, 'r', encoding='utf8')
         n2d_map = json.load(norm2dieth_file)
+        norm2dieth_file.close()
     except IOError as err:
         sys.stderr.write('Error opening {0} ({1})\n'.format(args.n2d, err))
         sys.exit(1)
@@ -287,14 +288,14 @@ def main():
             args.map_diacritic = args.map_diacritic.decode('utf8')
 
         dieth_forms = n2d_map.get(word)
-        # print dieth_forms
+
         for form in set(dieth_forms):
             transcription = transcribe_simple(form.lower(), clusters,
                                               max_length_cluster,
                                               args.map_diacritic)
 
-            # print transcription
             for multi in transcription:
+                # avoid duplicates in lexicon!
                 if (word, multi) not in seen_pairs:
                     output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
                     seen_pairs.add((word, multi))

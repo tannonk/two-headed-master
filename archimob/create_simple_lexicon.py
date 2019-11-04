@@ -160,7 +160,7 @@ def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None):
         * a string with a pseudo phonetic transcription of the input word
     """
 
-    verbose = True
+    verbose = False
     word = ProcessUnicodeCompounds(word, map_diacritic)
     word_length = len(word)
 
