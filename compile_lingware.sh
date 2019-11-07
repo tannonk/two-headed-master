@@ -37,7 +37,7 @@ lexicon="$tmp_dir/lexicon.txt"
 lexicon_tmp="$tmp_dir/lexicon"
 prepare_lang_tmp="$tmp_dir/prepare_lang_tmp"
 tmp_lang="$tmp_dir/lang"
-tree="$am_dir/tree"
+# tree="$am_dir/tree" # NOT USED!
 
 . path.sh
 
@@ -80,6 +80,8 @@ rm $lexicon_tmp/lexiconp.txt &> /dev/null
 CUR_TIME=$(date +%s)
 echo ""
 echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+echo ""
+
 echo ""
 echo "######################################"
 echo "### BEGIN: PREPARING LANGUAGE DATA ###"

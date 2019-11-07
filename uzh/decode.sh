@@ -160,5 +160,19 @@ if [ $stage -le 3 ]; then
     echo "score confidence and timing with sclite"
   fi
 fi
+
+# # adaption for CER
+# if [ $stage -le 3 ]; then
+#   if ! $skip_scoring ; then
+#     [ ! -x uzh/score_cer.sh ] && \
+#       echo "Not scoring because uzh/score_cer.sh does not exist or not executable." && exit 1;
+#     echo "score best paths"
+#     [ "$iter" != "final" ] && iter_opt="--iter $iter"
+#     uzh/score.sh $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
+#     echo "score confidence and timing with sclite"
+#     uzh/score_cer.sh $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
+#     echo "score confidence and timing with sclite"
+#   fi
+# fi
 echo "Decoding done."
 exit 0;

@@ -53,8 +53,8 @@ transcription=${6:-"orig"}
 kaldi_output_dir="$output_dir/decode" # output dir for decoding is now in decode_out/ instead of model dir
 tmp_dir="$output_dir/tmp"
 lang_dir="$output_dir/lang"
-wav_lst="$tmp_dir/wav.lst"
-wav_scp="$lang_dir/wav.scp"
+# wav_lst="$tmp_dir/wav.lst" # duplicate of 'output variable $output_lst (see below)'
+# wav_scp="$lang_dir/wav.scp" # NOT USED!!!
 feats_dir="$output_dir/feats"
 feats_log_dir="$output_dir/feats/log"
 
@@ -74,9 +74,9 @@ START_TIME=$(date +%s) # record time of operations
 
 # 1.- Create the transcriptions and wave list:
 echo ""
-echo "###################################################"
-echo "### BEGIN: EXTRACT TRANSCRIPTIONS AND WAVE LIST ###"
-echo "###################################################"
+echo "########################################################"
+echo "### BEGIN: EXTRACT TEST TRANSCRIPTIONS AND WAVE LIST ###"
+echo "########################################################"
 echo ""
 # Note the options -f and -p: we are rejecting files with no-relevant-speech or
 # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are

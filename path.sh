@@ -1,6 +1,6 @@
 export KALDI_ROOT='/opt/kaldi'
 
-if [[ -z "$KALDI_ROOT" ]]; then
+if [ -z "$KALDI_ROOT" ]; then
     echo 'Error: KALDI_ROOT is not set in path.sh. Please set it with the path to the local Kaldi folder'
     exit 1
 fi
