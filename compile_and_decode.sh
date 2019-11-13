@@ -36,9 +36,9 @@ sil_word='<SIL_WORD>'
 #####################################
 # Flags to choose with stages to run:
 #####################################
-do_compile_graph=1
-do_data_prep=1
-do_feature_extraction=1
+do_compile_graph=0
+do_data_prep=0
+do_feature_extraction=0
 do_decoding=1
 
 lm=$1
@@ -69,7 +69,7 @@ prepare_lang_tmp="$tmp_dir/prepare_lang_tmp"
 tmp_lang="$tmp_dir/lang"
 
 decode_dir="$output_dir/decode" # output dir for decoding
-lang_dir="$output_dir/lang"
+lang_dir="$output_dir/lang" # output dir for intermediate language data
 feats_dir="$output_dir/feats"
 feats_log_dir="$output_dir/feats/log"
 # wav_scp="$lang_dir/wav.scp" NOT USED !!!
@@ -290,6 +290,12 @@ fi
 #     [[ ! -e $f ]] && echo "Error. Missing input $f" && exit 1
 # done
 
+# $output_dir --> graphdir=$1
+# srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory
+# $lang_dir --> data=$2
+# $decode_dir --> dir=$3
+# $model_dir --> srcdir=$4
+
 if [[ $do_decoding -ne 0 ]]; then
 
     echo ""
@@ -299,7 +305,7 @@ if [[ $do_decoding -ne 0 ]]; then
     echo ""
 
     rm -rf $decode_dir/*
-    uzh/decode.sh --cmd "$decode_cmd" --nj $num_jobs $output_dir \
+    uzh/decode_wer_cer.sh --cmd "$decode_cmd" --nj $num_jobs $output_dir \
         $lang_dir $decode_dir $model_dir
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during decoding\n" && exit 1
