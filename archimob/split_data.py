@@ -63,7 +63,7 @@ def main():
 
     # read in dev split data
     if args.dev:
-        dev_utterances = parse_test_utterances(args.dev)
+        dev_utterances = parse_json(args.dev)
         sys.stderr.write('Collected {0} utterances from {1}\n'.format(
             len(test_utterances), args.dev))
     else:
