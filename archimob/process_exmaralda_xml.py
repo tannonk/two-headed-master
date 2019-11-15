@@ -182,16 +182,19 @@ def chunk_transcriptions(root, chunk_basename,
             norm_utterance = []
             swiss_utterance = []
 
-            for word in u.findall('{' + namespace + '}w'):
-                if word.text is not None and word.attrib.get('normalised').encode('utf-8') not in ignored_normalised_forms:
-
-                    # glue multi-token forms, e.g. new york --> new_york
-                    norm_form = word.attrib.get('normalised').encode('utf-8')
-                    norm_form = norm_form.strip()
-                    norm_form = re.sub(r'\s+', r'_', norm_form)
-
-                    norm_utterance.append(norm_form)
-                    swiss_utterance.append(word.text.encode('utf-8'))
+            for word in u.iter():
+                if word.tag == '{' + namespace + '}w':
+                    if word.text is not None and word.attrib.get('normalised').encode('utf-8') not in ignored_normalised_forms:
+                        # glue multi-token forms, e.g. new york --> new_york
+                        norm_form = word.attrib.get('normalised').encode('utf-8')
+                        norm_form = norm_form.strip()
+                        norm_form = re.sub(r'\s+', r'_', norm_form)
+                        norm_utterance.append(norm_form)
+                        swiss_utterance.append(word.text.encode('utf-8'))
+                elif word.tag == '{' + namespace + '}pause':
+                    if len(norm_utterance) > 0 or len(swiss_utterance) > 0:
+                        norm_utterance.append("/")
+                        swiss_utterance.append("/")
 
             # Create the chunk object:
             chunk_key = ArchiMobChunkXML.create_chunk_key(chunk_basename,
@@ -350,7 +353,7 @@ def main():
     # Process all the XML / EXB files:
     for input_file in args.input_annotation:
 
-        print 'Processing {0}'.format(input_file)
+        # print 'Processing {0}'.format(input_file)
 
         if not os.path.exists(input_file):
             sys.stderr.write('The input XML file {0} does ' \
