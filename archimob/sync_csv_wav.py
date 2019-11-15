@@ -32,7 +32,7 @@ def get_args():
                         nargs='?', required=True)
 
     parser.add_argument('--chuncked-wav-dir', '-chw', help='Folder with the' \
-                        'chuncked wavefiles if they already exit but should' \
+                        'chuncked wavefiles if they already exist but should' \
                         'be renamed', required=True)
 
     parser.add_argument('--verbose', required=False, action='store_true')
