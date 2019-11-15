@@ -17,7 +17,7 @@ set -u
 ################
 # All these options can be changed from the command line. For example:
 # --num-jobs 16 --use-gpu true ...
-num_jobs=4  # Number of jobs for parallel processing
+num_jobs=32  # Number of jobs for parallel processing
 use_gpu=false  # either true or false
 num_senones=2000  # Number of senones for the triphone stage
 num_gaussians=10000  # Number of Gaussians for the triphone stage

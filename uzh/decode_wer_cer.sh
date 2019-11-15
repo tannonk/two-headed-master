@@ -58,6 +58,11 @@ srcdir=$4 # specify model directory explicitly to allow decoding to be written t
 model=$srcdir/$iter.mdl
 
 
+echo ""
+echo "The following scoring options will be used: $scoring_opts"
+echo ""
+
+
 [ ! -z "$online_ivector_dir" ] && \
   extra_files="$online_ivector_dir/ivector_online.scp $online_ivector_dir/ivector_period"
 
@@ -153,19 +158,21 @@ fi
 if [ $stage -le 3 ]; then
   if ! $skip_scoring ; then
     [ ! -x uzh/score.sh ] && echo "Not scoring because uzh/score.sh does not exist or not executable." && exit 1;
-    echo "scoring best paths for WER"
+    echo -e "\nScoring best paths for WER..."
     [ "$iter" != "final" ] && iter_opt="--iter $iter" # force --iter arg to final
-    uzh/score.sh $iter_opt --cmd "$cmd" \
+    uzh/score.sh $iter_opt $scoring_opts --cmd "$cmd" \
     $data \
     $graphdir \
     $dir
+    echo -e "\n### Scoring WER completed ###"
     # echo "score confidence and timing with sclite"
-    echo "scoring best paths for CER"
+    echo -e "\nScoring best paths for CER..."
     [ ! -x uzh/score_cer.sh ] && echo "Not scoring because uzh/score_cer.sh does not exist or not executable." && exit 1;
-    uzh/score_cer.sh --stage 2 $iter_opt --cmd "$cmd" \
+    uzh/score_cer.sh --stage 2 $iter_opt $scoring_opts --cmd "$cmd" \
     $data \
     $graphdir \
     $dir
+    echo -e "\n### Scoring CER completed ###\n"
   fi
 fi
 

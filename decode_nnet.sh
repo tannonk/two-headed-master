@@ -84,7 +84,7 @@ echo ""
 # echo "Processing $input_csv:"
 archimob/process_archimob_csv.py \
   -i $input_csv \
-  -trans orig \
+  -trans $transcription \
   -f \
   -p \
   -t $input_transcriptions \

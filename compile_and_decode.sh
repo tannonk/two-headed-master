@@ -9,12 +9,6 @@ export LC_ALL=C # from compile_lingware.sh
 ## Second, we extract features from test data.
 ## Finally, we decode the test data using the compiled graph.
 
-# echo $0 $@
-# if [[ $# -ne 5 ]]; then
-#     echo "Wrong call. Should be: $0 am_ling_dir vocabulary language_model acoustic_models_dir output_dir"
-#     exit 1
-# fi
-
 # Get the general configuration variables
 # (SPOKEN_NOISE_WORD, SIL_WORD and GRAPHEMIC_CLUSTERS)
 . uzh/configuration.sh
@@ -36,21 +30,26 @@ sil_word='<SIL_WORD>'
 #####################################
 # Flags to choose with stages to run:
 #####################################
-do_compile_graph=0
-do_data_prep=0
-do_feature_extraction=0
+do_compile_graph=1
+do_data_prep=1
+do_feature_extraction=1
 do_decoding=1
 
+##################
+# Input arguments:
+##################
+
 lm=$1
-am_dir=$2 # am_out directory (output of train_AM.sh, usually am_out/
-input_csv=$3 # test csv for decoding
+am_dir=$2 # am_out directory (output of train_AM.sh, usually am_out/)
+dev_csv=$3 # dev csv for decoding
 wav_dir=$4 # audio files for decoding
-output_dir=$5 # can be shared between comp and dec?
+output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
 
 #################
 # Existing files: cf. am_out/initial_data/ling/ vs am_out/data/lang/
 #################
+
 am_ling_dir="$am_dir/initial_data/ling/" # equivalent to data/local/lang (input)
 # vocabulary="$am_dir/initial_data/tmp/vocabulary.txt" # initial vocab created by train_am
 # lexicon="$am_dir/initial_data/ling/lexicon.txt" # lexicon created by train_am
@@ -62,6 +61,7 @@ model_dir="$am_dir/models/discriminative/nnet_disc" # final model created by tra
 ###########################
 # Intermediate Directories:
 ###########################
+
 # lexicon="$tmp_dir/lexicon.txt" # created in train_am, removed to reduce repetition!
 tmp_dir="$output_dir/tmp"
 lexicon_tmp="$tmp_dir/lexicon"
@@ -77,10 +77,13 @@ feats_log_dir="$output_dir/feats/log"
 ##########
 ## Output:
 ##########
-wav_lst="$tmp_dir/wav.lst"
-input_transcriptions="$tmp_dir/text"
 
-# dependencies for compiling graph
+wav_lst="$tmp_dir/wav.lst"
+dev_transcriptions="$tmp_dir/text"
+
+#####################################################################################
+
+# check dependencies for compiling graph
 for f in $lm $phone_table; do
     [[ ! -e $f ]] && echo -e "\n\tERROR: missing input $f\n" && exit 1
 done
@@ -200,27 +203,27 @@ if [[ $do_compile_graph -ne 0 ]]; then
 
 fi
 
-####################
-## 2. Prep Test Data
-####################
+###########################
+## 2. Prep DEVELOPMENT Data
+###########################
 
 if [[ $do_data_prep -ne 0 ]]; then
     # 1.- Create the transcriptions and wave list:
     echo ""
-    echo "########################################################"
-    echo "### BEGIN: EXTRACT TEST TRANSCRIPTIONS AND WAVE LIST ###"
-    echo "########################################################"
+    echo "#######################################################"
+    echo "### BEGIN: EXTRACT DEV TRANSCRIPTIONS AND WAVE LIST ###"
+    echo "#######################################################"
     echo ""
     # Note the options -f and -p: we are rejecting files with no-relevant-speech or
     # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are
     # mapped to less specific classes (see process_archimob.csv.py)
-    # echo "Processing $input_csv:"
+    # echo "Processing $dev_csv:"
     archimob/process_archimob_csv.py \
-      -i $input_csv \
-      -trans orig \
+      -i $dev_csv \
+      -trans $transcription \
       -f \
       -p \
-      -t $input_transcriptions \
+      -t $dev_transcriptions \
       -s $spn_word \
       -n $sil_word \
       -o $wav_lst
@@ -228,7 +231,7 @@ if [[ $do_data_prep -ne 0 ]]; then
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1
 
     # Sort them the way Kaldi likes it:
-    sort $input_transcriptions -o $input_transcriptions
+    sort $dev_transcriptions -o $dev_transcriptions
     sort $wav_lst -o $wav_lst
 
     # 2. Create the secondary files needed by Kaldi (wav.scp, utt2spk, spk2utt):
@@ -241,7 +244,7 @@ if [[ $do_data_prep -ne 0 ]]; then
       -w $wav_dir \
       -o $lang_dir \
       decode \
-      -t $input_transcriptions
+      -t $dev_transcriptions
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_secondary_files.py\n" && exit 1
 
@@ -286,7 +289,7 @@ fi
 ##############
 
 # dependencies for decoding
-# for f in $input_transcriptions $wav_dir $model_dir ; do
+# for f in $dev_transcriptions $wav_dir $model_dir ; do
 #     [[ ! -e $f ]] && echo "Error. Missing input $f" && exit 1
 # done
 

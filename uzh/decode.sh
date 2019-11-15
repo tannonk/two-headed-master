@@ -50,7 +50,9 @@ if [ $# -ne 4 ]; then
   exit 1;
 fi
 
+# dir containing disambig_tid.int HCLG.fst num_pdfs phones phones.txt tmp  words.txt
 graphdir=$1
+
 data=$2
 dir=$3
 # srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory.
@@ -161,18 +163,6 @@ if [ $stage -le 3 ]; then
   fi
 fi
 
-# # adaption for CER
-# if [ $stage -le 3 ]; then
-#   if ! $skip_scoring ; then
-#     [ ! -x uzh/score_cer.sh ] && \
-#       echo "Not scoring because uzh/score_cer.sh does not exist or not executable." && exit 1;
-#     echo "score best paths"
-#     [ "$iter" != "final" ] && iter_opt="--iter $iter"
-#     uzh/score.sh $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
-#     echo "score confidence and timing with sclite"
-#     uzh/score_cer.sh $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
-#     echo "score confidence and timing with sclite"
-#   fi
-# fi
+
 echo "Decoding done."
 exit 0;
