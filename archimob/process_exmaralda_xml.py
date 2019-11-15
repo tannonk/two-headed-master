@@ -181,10 +181,15 @@ def chunk_transcriptions(root, chunk_basename,
             norm_utterance = []
             swiss_utterance = []
 
-            for word in u.findall('{' + namespace + '}w'):
-                if word.text is not None and word.attrib.get('normalised').encode('utf-8') != u'==':
-                    norm_utterance.append(word.attrib.get('normalised').encode('utf-8'))
-                    swiss_utterance.append(word.text.encode('utf-8'))
+            for word in u.iter():
+                if word.tag == '{' + namespace + '}w':
+                    if word.text is not None and word.attrib.get('normalised').encode('utf-8') != u'==':
+                        norm_utterance.append(word.attrib.get('normalised').encode('utf-8'))
+                        swiss_utterance.append(word.text.encode('utf-8'))
+                elif word.tag == '{' + namespace + '}pause':
+                    if len(norm_utterance) > 0 or len(swiss_utterance) > 0:
+                        norm_utterance.append("/")
+                        swiss_utterance.append("/")
 
             # Create the chunk object:
             chunk_key = ArchiMobChunkXML.create_chunk_key(chunk_basename,
@@ -201,7 +206,7 @@ def chunk_transcriptions(root, chunk_basename,
                                          event_start)
 
             # if verbose:
-            print '\tNew event: {0}'.format(new_chunk)
+            # print '\tNew event: {0}'.format(new_chunk)
 
             # Add the chunk to the output list:
             chunk_list.append(new_chunk)
@@ -343,7 +348,7 @@ def main():
     # Process all the XML / EXB files:
     for input_file in args.input_annotation:
 
-        print 'Processing {0}'.format(input_file)
+        # print 'Processing {0}'.format(input_file)
 
         if not os.path.exists(input_file):
             sys.stderr.write('The input XML file {0} does ' \
