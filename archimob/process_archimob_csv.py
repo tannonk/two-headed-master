@@ -191,7 +191,7 @@ def process_transcription(input_trans, mappings, spn_symbol):
         * a unicode string with the transformed annotations
     """
 
-    verbose = False
+    verbose = True
 
     if verbose:
         print '\tIn process_transcription: ' \
@@ -402,11 +402,12 @@ def main():
                 # do this...
                 transcription = data_dict['transcription']
 
-        if args.type_transcription == 'norm':
+        elif args.type_transcription == 'norm':
             transcription = data_dict['normalized']
 
         # Write the transcriptions file:
-	    output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],transcription.encode('utf8')))
+	output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
+                                           transcription.encode('utf8')))
 
         # Write the utterance list:
         output_l.write('{0}\n'.format(data_dict['utt_id']))
