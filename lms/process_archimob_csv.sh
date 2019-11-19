@@ -31,11 +31,15 @@ xpref=${xbase%.*} # cut the file name without extension
 
 # step 1: extract utterances
 echo "Extacting utterances..."
-cut -d, -f2 ${csv_file} | sed '1d' | \
-perl -pe ' s#(\s)+#\1#g; s#^\s+##; ' > ${xpath}/${xpref}_orig_utt.txt
+cut -d, -f2 ${csv_file} | \
+sed '1d' | \
+perl -pe ' s#/##g; s#(\s)+#\1#g; s#^\s+##; ' \
+> ${xpath}/${xpref}_orig_utt.txt
 
-cut -d, -f3 ${csv_file} | sed '1d' | \
-perl -pe ' s#(\s)+#\1#g; s#^\s+##; ' > ${xpath}/${xpref}_norm_utt.txt
+cut -d, -f3 ${csv_file} | \
+sed '1d' | \
+perl -pe ' s#/##g; s#(\s)+#\1#g; s#^\s+##; ' \
+> ${xpath}/${xpref}_norm_utt.txt
 
 # step 2: extract vocab
 echo "Extacting vocabularies..."

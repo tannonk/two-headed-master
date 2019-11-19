@@ -15,7 +15,7 @@ The output CSV can be analysed to view the correlation of the assessed metrics.
 
 Example call:
 
-python3 metric_correlation.py /mnt/tannon/processed/archimob_r1/orig/decode_out/decode /mnt/tannon/case_studies/metric_correlation.csv
+python3 metric_correlation.py /mnt/tannon/processed/archimob_r1/orig/decode_out/decode /mnt/tannon/case_studies/metric_correlation.csv /mnt/tannon/case_studies/metric_correlation.pdf
 
 """
 
@@ -27,6 +27,7 @@ import pandas as pd
 
 decode_dir = Path(sys.argv[1])
 outfile = sys.argv[2]
+out_image = sys.argv[3]
 
 wer_files = []
 cer_files = []
@@ -59,19 +60,66 @@ else:
 
 # read in relevant stats from each file
 stat_dict = defaultdict(dict)
+wip00 = defaultdict(dict)
+wip05 = defaultdict(dict)
+wip10 = defaultdict(dict)
 
 for group in [wer_files, cer_files, f1_files]:
     for file in group:
-        eval, lmwt, wip = file.name.split('_')
-        if lmwt in ['7', '8', '9']: # append zero to allow correct lexical sorting
+        measure, lmwt, wip = file.name.split('_')
+        if lmwt in ['1', '2', '3', '4', '5', '6', '7', '8', '9']: # append zero to allow correct lexical sorting
             lmwt = '0'+lmwt
-        stat_dict[eval][lmwt+'_'+wip] = extract_stats(str(file))
+        stat_dict[measure][lmwt+'_'+wip] = extract_stats(str(file))
+        if wip == '0.0':
+            wip00[measure][lmwt+'_'+wip] = extract_stats(str(file))
+        elif wip == '0.5':
+            wip05[measure][lmwt+'_'+wip] = extract_stats(str(file))
+        elif wip == '1.0':
+            wip10[measure][lmwt+'_'+wip] = extract_stats(str(file))
 
-    # print(f'{extract_stats(i[0])}\t{extract_stats(i[1])}\t{extract_stats(i[2])}')
-# print(stat_dict)
+####
 
 df = pd.DataFrame.from_dict(stat_dict)
 # df.sort_values(by=df.columns[1], inplace=True)
 df.sort_index(axis=0, inplace=True)
 
-df.to_csv(outfile, sep=',', header=True, encoding='utf8')
+df.to_csv(outfile+'.csv', sep=',', header=True, encoding='utf8')
+
+ax = df.plot(stacked=False, colormap='winter', ylim=(0,100), rot=45)
+fig = ax.get_figure()
+fig.savefig(out_image+'.png', dpi=300, format='png')
+
+####
+
+if wip00:
+    df = pd.DataFrame.from_dict(wip00)
+    # df.sort_values(by=df.columns[1], inplace=True)
+    df.sort_index(axis=0, inplace=True)
+
+    df.to_csv(outfile+'00.csv', sep=',', header=True, encoding='utf8')
+
+    ax = df.plot(stacked=False, colormap='winter', ylim=(0,100), rot=45)
+    fig = ax.get_figure()
+    fig.savefig(out_image+'00.png', dpi=300, format='png')
+
+if wip05:
+    df = pd.DataFrame.from_dict(wip05)
+    # df.sort_values(by=df.columns[1], inplace=True)
+    df.sort_index(axis=0, inplace=True)
+
+    df.to_csv(outfile+'05.csv', sep=',', header=True, encoding='utf8')
+
+    ax = df.plot(stacked=False, colormap='winter', ylim=(0,100), rot=45)
+    fig = ax.get_figure()
+    fig.savefig(out_image+'05.png', dpi=300, format='png')
+
+if wip10:
+    df = pd.DataFrame.from_dict(wip10)
+    # df.sort_values(by=df.columns[1], inplace=True)
+    df.sort_index(axis=0, inplace=True)
+
+    df.to_csv(outfile+'10.csv', sep=',', header=True, encoding='utf8')
+
+    ax = df.plot(stacked=False, colormap='winter', ylim=(0,100), rot=45)
+    fig = ax.get_figure()
+    fig.savefig(out_image+'10.png', dpi=300, format='png')

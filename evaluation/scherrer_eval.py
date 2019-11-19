@@ -13,9 +13,9 @@ Example call:
 
 """
 
-__Author__: "Tannon Kew"
-__Email__: "tannon.kew@uzh.ch"
-__Date__: "13.11.19"
+# Author: Tannon Kew
+# Email: tannon.kew@uzh.ch
+# Date: 13.11.19
 
 import sys
 import argparse
@@ -59,17 +59,17 @@ def get_mappings(n2d_map_file, verbose=0):
         print('\nNORM-TO-DIETH mapping sample:')
         sample_keys = random.sample(list(n2d_map), 10)
         for k in sample_keys:
-            print(f'{k}\t{n2d_map[k]}')
+            print('{}\t{}'.format(k, n2d_map[k]))
 
 
         print('\nDIETH-TO-NORM mapping sample:')
         sample_keys = random.sample(list(d2n_map), 10)
         for k in sample_keys:
-            print(f'{k}\t{d2n_map[k]}')
+            print('{}\t{}'.format(k, d2n_map[k]))
 
         multiple_values = sum([1 for v in d2n_map.values() if len(v) > 1])
 
-        print(f'\nWARNING: {multiple_values} Dieth transcriptions have multiple corresponding normalised transcriptions.\n')
+        print('\nWARNING: {} Dieth transcriptions have multiple corresponding normalised transcriptions.\n'.format(multiple_values))
 
     return n2d_map, d2n_map
 
@@ -189,7 +189,7 @@ def main():
 
     # control whether ref file and hyp file are a valid pair based on number of lines
     if quick_lc(args.ref) != quick_lc(args.hyp):
-        sys.exit(f'{args.ref} does not have the same number of lines as {args.hyp}!')
+        sys.exit('{} does not have the same number of lines as {}!'.format(args.ref, args.hyp))
 
     # collect reference transcriptions and store them in a dictionary
     refs = collect_references(args.ref)
@@ -238,9 +238,11 @@ def main():
                 flex_ratio = 0
 
             if args.verbose == 1:
-                print(f'%F1: {f:.2f} %P: {p:.2f} %R: {r:.2f} [ %Flex: {flex_ratio:.2f} {flex} / {hyp_len} ]')
+                # print(f'%F1: {f:.2f} %P: {p:.2f} %R: {r:.2f} [ %Flex: {flex_ratio:.2f} {flex} / {hyp_len} ]')
+                print('%F1: {:.2f} %P: {:.2f} %R: {:.2f} [ %Flex: {:.2f} {} / {} ]'.format(f, p, r, flex_ratio, flex, hyp_len))
             elif args.verbose == 2:
-                print(f'%F1: {f:.2f} %P: {p:.2f} %R: {r:.2f} [ %Flex: {flex_ratio:.2f} {flex} / {hyp_len} ID: {utt_id} REF: {" ".join(ref)} HYP: {" ".join(hyp)} ]')
+                # print(f'%F1: {f:.2f} %P: {p:.2f} %R: {r:.2f} [ %Flex: {flex_ratio:.2f} {flex} / {hyp_len} ID: {utt_id} REF: {" ".join(ref)} HYP: {" ".join(hyp)} ]')
+                print('%F1: {:.2f} %P: {:.2f} %R: {:.2f} [ %Flex: {:.2f} {} / {} ID: {} REF: {} HYP: {} ]'.format(f, p, r, flex_ratio, flex, hyp_len, utt_id, " ".join(ref), " ".join(hyp)))
 
     # calculate averages
     av_p = total_p/n*100
@@ -248,8 +250,8 @@ def main():
     av_f = total_f/n*100
     av_flex_ratio = total_flex/total_hyp_words*100
 
-    print(f'%F1: {av_f:.2f} %P: {av_p:.2f} %R: {av_r:.2f} [ %Flex: {av_flex_ratio:.2f} {total_flex} / {total_hyp_words} ]')
-
+    # print(f'%F1: {av_f:.2f} %P: {av_p:.2f} %R: {av_r:.2f} [ %Flex: {av_flex_ratio:.2f} {total_flex} / {total_hyp_words} ]')
+    print('%F1: {:.2f} %P: {:.2f} %R: {:.2f} [ %Flex: {:.2f} {} / {} ]'.format(av_f, av_p, av_r, av_flex_ratio, total_flex, total_hyp_words))
 
 if __name__ == '__main__':
     main()

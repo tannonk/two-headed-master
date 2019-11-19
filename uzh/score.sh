@@ -16,8 +16,8 @@ decode_mbr=false
 stats=true
 beam=6
 word_ins_penalty=0.0,0.5,1.0
-min_lmwt=7
-max_lmwt=17
+min_lmwt=1
+max_lmwt=50
 iter=final
 #end configuration section.
 

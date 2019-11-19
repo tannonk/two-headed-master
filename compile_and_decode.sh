@@ -34,6 +34,7 @@ do_compile_graph=1
 do_data_prep=1
 do_feature_extraction=1
 do_decoding=1
+do_additional_scoring=1
 
 ##################
 # Input arguments:
@@ -45,6 +46,7 @@ dev_csv=$3 # dev csv for decoding
 wav_dir=$4 # audio files for decoding
 output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
+norm2dieth_mapping=${7:-"/mnt/tannon/corpus_data/norm2dieth.json"}
 
 #################
 # Existing files: cf. am_out/initial_data/ling/ vs am_out/data/lang/
@@ -314,8 +316,30 @@ if [[ $do_decoding -ne 0 ]]; then
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during decoding\n" && exit 1
 
     # Copy the results to the output folder:
-    # cp $decode_dir/scoring_kaldi/best_wer $output_dir
-    # cp -r $decode_dir/scoring_kaldi/wer_details $output_dir/
+    cp $decode_dir/scoring_kaldi/best_wer $output_dir
+    cp $decode_dir/scoring_kaldi/best_cer $output_dir
+    # cp -r $decode_dir/scoring_kaldi/wer_details $output_dir
+
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
+
+fi
+
+if [[ $do_additional_scoring -ne 0 ]]; then
+
+    echo ""
+    echo "#########################"
+    echo "### BEGIN: F1 SCORING ###"
+    echo "#########################"
+    echo ""
+
+    [[ ! -f $norm2dieth_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $norm2dieth_mapping\n" && exit 1
+
+    bash evaluation/score_f1.sh $decode_dir $norm2dieth_mapping
+
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 
 fi
 

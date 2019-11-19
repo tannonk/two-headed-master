@@ -191,7 +191,7 @@ def process_transcription(input_trans, mappings, spn_symbol):
         * a unicode string with the transformed annotations
     """
 
-    verbose = True
+    verbose = False
 
     if verbose:
         print '\tIn process_transcription: ' \

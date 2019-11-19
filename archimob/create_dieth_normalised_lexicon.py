@@ -15,7 +15,7 @@ import json
 import codecs
 
 # Signs to exclude from the transcriptions (when --add-signs is not specified)
-EXCLUDE_SET = set(["'", '-', '.', '==', '***'])
+EXCLUDE_SET = set(["'", '-', '.', '==', '***', '/'])
 
 def get_args():
     """
@@ -281,24 +281,31 @@ def main():
 
     for word in input_f:
 
-        word = word.rstrip().decode('utf8')
-        # print word
+        word = word.rstrip()
+        # word = word.rstrip().decode('utf8')
+        print word
+
         if isinstance(args.map_diacritic, str):
             print args.map_diacritic
             args.map_diacritic = args.map_diacritic.decode('utf8')
 
+        # if word == u'/': # skip silence markers
+        #     continue
+
         dieth_forms = n2d_map.get(word)
 
-        for form in set(dieth_forms):
-            transcription = transcribe_simple(form.lower(), clusters,
-                                              max_length_cluster,
-                                              args.map_diacritic)
+        if dieth_forms:
 
-            for multi in transcription:
-                # avoid duplicates in lexicon!
-                if (word, multi) not in seen_pairs:
-                    output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
-                    seen_pairs.add((word, multi))
+            for form in set(dieth_forms):
+                transcription = transcribe_simple(form.lower(), clusters,
+                                                  max_length_cluster,
+                                                  args.map_diacritic)
+
+                for multi in transcription:
+                    # avoid duplicates in lexicon!
+                    if (word, multi) not in seen_pairs:
+                        output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
+                        seen_pairs.add((word, multi))
 
     output_f.close()
     input_f.close()
