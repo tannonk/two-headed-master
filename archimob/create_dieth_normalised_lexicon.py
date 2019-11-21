@@ -13,9 +13,10 @@ import argparse
 import unicodedata
 import json
 import codecs
+from collections import Counter
 
 # Signs to exclude from the transcriptions (when --add-signs is not specified)
-EXCLUDE_SET = set(["'", '-', '.', '==', '***', '/'])
+EXCLUDE_SET = set(["'", '-', '.', '==', '***', '/', '<SPOKEN_NOISE>', '<NOISE>', '<SIL>'])
 
 def get_args():
     """
@@ -256,8 +257,10 @@ def main():
             max_length_cluster = len(clust)
 
     try:
+        # with codecs.open(args.n2d, 'r', encoding='utf8') as norm2dieth_file:
+        # norm2dieth_file = open(args.n2d, 'r')
         norm2dieth_file = codecs.open(args.n2d, 'r', encoding='utf8')
-        n2d_map = json.load(norm2dieth_file)
+        n2d_map = json.load(norm2dieth_file, encoding='utf8')
         norm2dieth_file.close()
     except IOError as err:
         sys.stderr.write('Error opening {0} ({1})\n'.format(args.n2d, err))
@@ -265,6 +268,7 @@ def main():
 
     try:
         input_f = open(args.vocabulary, 'r')
+        # input_f = codecs.open(args.vocabulary, 'r', encoding='utf8')
     except IOError as err:
         sys.stderr.write('Error opening {0} ({1})\n'.format(args.vocabulary,
                                                             err))
@@ -277,35 +281,49 @@ def main():
                                                              err))
         sys.exit(1)
 
+
+    print n2d_map
+
     seen_pairs = set()
+
+    problem_words = Counter()
 
     for word in input_f:
 
-        word = word.rstrip()
-        # word = word.rstrip().decode('utf8')
-        print word
+        word = word.rstrip().decode('utf8')
 
         if isinstance(args.map_diacritic, str):
-            print args.map_diacritic
+            # print args.map_diacritic
             args.map_diacritic = args.map_diacritic.decode('utf8')
 
+        # print "ORIGINAL", word
         # if word == u'/': # skip silence markers
         #     continue
 
+        # print "DECODED", word
+
         dieth_forms = n2d_map.get(word)
 
-        if dieth_forms:
+        # print dieth_forms
+        if not dieth_forms:
+            problem_words[word] += 1
+            continue
 
-            for form in set(dieth_forms):
-                transcription = transcribe_simple(form.lower(), clusters,
-                                                  max_length_cluster,
-                                                  args.map_diacritic)
+        for form in set(dieth_forms):
+            transcription = transcribe_simple(form.lower(), clusters,
+                                              max_length_cluster,
+                                              args.map_diacritic)
 
-                for multi in transcription:
-                    # avoid duplicates in lexicon!
-                    if (word, multi) not in seen_pairs:
-                        output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
-                        seen_pairs.add((word, multi))
+            for multi in transcription:
+                # avoid duplicates in lexicon!
+                if (word, multi) not in seen_pairs:
+                    output_f.write('{0} {1}\n'.format(word.encode('utf8'), multi.encode('utf8')))
+                    seen_pairs.add((word, multi))
+
+    if problem_words:
+        print "{} problematic words".format(len(problem_words))
+        # for i in problem_words:
+        #     print i
 
     output_f.close()
     input_f.close()

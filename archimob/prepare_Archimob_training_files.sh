@@ -172,7 +172,7 @@ if [[ $transcription = "norm" ]]; then
 
     echo "Generating the lexicon with Dieth transcriptions: $output_lexicon"
 
-    $scripts_dir/create_dieth_normalised_lexicon.py \
+    python3 $scripts_dir/create_lexicon.py \
       -v $vocabulary \
       -c $input_clusters \
       -d $pron_lex \
@@ -182,19 +182,19 @@ if [[ $transcription = "norm" ]]; then
 
   else
 
-    echo -e "\n\tERROR: could not get pronunciation files. Niether Dieth nor SAMPA was found.\n" && exit 1
+    echo -e "\n\tERROR: could not get pronunciation files. Niether Dieth nor SAMPA mapping was found.\n" && exit 1
 
   fi
 
 else
 
   echo "Generating the lexicon for original transcription: $output_lexicon"
-  $scripts_dir/create_simple_lexicon.py \
+  python3 $scripts_dir/create_lexicon.py \
     -v $vocabulary \
     -c $input_clusters \
     -o $output_lexicon
 
-  [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_simple_lexicon.py" && exit 1
+  [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_lexicon.py" && exit 1
 
 fi
 

@@ -51,7 +51,6 @@ graph_dir=$4 # out_ling, i.e. dir containing HCLG.fst
 output_dir=$5 # output directory for evaluation results
 lmwt=${6:-"10"} # this should be provided based upon the results of devset tuning
 # scoring_opts=${7:-"--min-lmwt 10 --max-lmwt 10"}
-
 transcription=${7:-"orig"}
 
 ###############

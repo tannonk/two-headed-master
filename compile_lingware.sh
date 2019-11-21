@@ -56,12 +56,12 @@ echo "### BEGIN: GENERATE LEXICON $lexicon ###"
 echo "#########################################"
 echo ""
 
-archimob/create_simple_lexicon.py \
+archimob/create_lexicon.py \
   -v $vocabulary \
   -c $GRAPHEMIC_CLUSTERS \
   -o $lexicon
 
-[[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_simple_lexicon.py\n" && exit 1
+[[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit 1
 
 # Add to the lexicon the mapping for the silence word:
 echo -e "$SIL_WORD SIL\n$SPOKEN_NOISE_WORD SPN" | cat - $lexicon | \
