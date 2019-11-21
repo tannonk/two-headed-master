@@ -75,8 +75,7 @@ feats_log_dir="$output_dir/feats/log"
 models="$output_dir/models"
 phone_table="$data/lang/phones.txt"
 
-# Get the general configuration variables (SPOKEN_NOISE_WORD, SIL_WORD, and
-# GRAPHEMIC_CLUSTERS)
+# Get the general configuration variables (NOISE_WORD, UNK_WORD, SPOKEN_NOISE_WORD, SIL_WORD, and GRAPHEMIC_CLUSTERS)
 . uzh/configuration.sh
 
 for f in $input_csv $GRAPHEMIC_CLUSTERS $input_wav_dir; do
@@ -109,6 +108,7 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     archimob/prepare_Archimob_training_files.sh \
       -s "$SPOKEN_NOISE_WORD" \
 			-n "$SIL_WORD" \
+      -m "$NOISE_WORD" \
       -t $transcription \
 			$input_csv \
       $input_wav_dir \

@@ -4,7 +4,7 @@
 """
 Script that takes as input out_AM/initial_data/ling/lexicon.txt created by
 train_AM.sh and returns vocabulary of the train data with no: <SIL_WORD> SIL
-and <SPOKEN_NOISE> SPN
+and <SPOKEN_NOISE> SPN <NOISE> NSN
 """
 
 import sys

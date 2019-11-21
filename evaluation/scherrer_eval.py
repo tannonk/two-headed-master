@@ -76,6 +76,7 @@ def get_mappings(n2d_map_file, verbose=0):
 def normalise_utterance(utt):
     utt = utt.replace('<SPOKEN_NOISE>', '')
     utt = utt.replace('<SIL_WORD>', '')
+    utt = utt.replace('<NOISE>', '')
     return utt.split()
 
 def calulate_flexible_overlap(n2d_map, d2n_map, ref, hyp, verbose=0):

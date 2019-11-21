@@ -15,6 +15,7 @@ set -u
 num_jobs=32  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
+nsn_word='<NOISE>'
 
 #####################################
 # Flags to choose with stages to run:
@@ -48,7 +49,9 @@ wav_dir=$2 # directory containing audio files
 am_dir=$3 # am_out directory (output of train_AM.sh, usually am_out/)
 graph_dir=$4 # out_ling, i.e. dir containing HCLG.fst
 output_dir=$5 # output directory for evaluation results
-lmwt=${6:-"9"} # this should be provided based upon the results of dev set tuning
+lmwt=${6:-"10"} # this should be provided based upon the results of devset tuning
+# scoring_opts=${7:-"--min-lmwt 10 --max-lmwt 10"}
+
 transcription=${7:-"orig"}
 
 ###############
@@ -99,8 +102,9 @@ if [[ $do_data_prep -ne 0 ]]; then
       -f \
       -p \
       -t $test_transcriptions \
-      -s $spn_word \
-      -n $sil_word \
+      --spn-word $spn_word \
+      --sil-word $sil_word \
+      --nsn-word $nsn_word \
       -o $wav_lst
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1

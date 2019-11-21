@@ -11,7 +11,7 @@ input:
 import sys
 import os
 import re
-
+import string
 import xml.etree.ElementTree as ET
 
 import argparse
@@ -192,9 +192,23 @@ def chunk_transcriptions(root, chunk_basename,
                         norm_utterance.append(norm_form)
                         swiss_utterance.append(word.text.encode('utf-8'))
                 elif word.tag == '{' + namespace + '}pause':
-                    if len(norm_utterance) > 0 or len(swiss_utterance) > 0:
-                        norm_utterance.append("/")
-                        swiss_utterance.append("/")
+                    # if len(norm_utterance) > 0 or len(swiss_utterance) > 0:
+                    norm_utterance.append("<SIL_WORD>")
+                    swiss_utterance.append("<SIL_WORD>")
+                elif word.tag == '{' + namespace + '}desc':
+                    if word.text is not None and word.text.startswith(('[', '{')): # label as NSN
+                        # <desc xml:id="d1300-u3437-w9">[lacht]</desc>
+                        # <desc xml:id="d1224-u2716-w1">{blättern}</desc>
+                        norm_utterance.append("<NOISE>")
+                        swiss_utterance.append("<NOISE>")
+                    else:
+                        # <desc xml:id="d1053-u1559-w4">(ee$</desc>
+                        norm_utterance.append("<SPOKEN_NOISE>")
+                        swiss_utterance.append("<SPOKEN_NOISE>")
+                elif word.tag == '{' + namespace + '}del':
+                    # <del type="truncation" xml:id="d1300-u3766-w2">isch/</del>
+                    norm_utterance.append("<SPOKEN_NOISE>")
+                    swiss_utterance.append("<SPOKEN_NOISE>")
 
             # Create the chunk object:
             chunk_key = ArchiMobChunkXML.create_chunk_key(chunk_basename,

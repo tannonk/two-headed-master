@@ -14,7 +14,7 @@ import re
 import argparse
 from pathlib import Path
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 
 def get_args():
     """
@@ -68,7 +68,7 @@ def write_lexicon(vocab, outfile, sampa_dict):
             else:
                 no_pron[vocab_word] += 1
 
-    print('{} items in vocabulary of length {} have at least 1 pronunciation. ({:.2f}%)'.format(c, line_c, c/line_c*100))
+    print('\nATTENTION: {} items in vocabulary of length {} have at least 1 pronunciation. ({:.2f}%)\n'.format(c, line_c, c/line_c*100))
 
 def main():
 
@@ -77,7 +77,22 @@ def main():
     with open(args.sampa_file, 'r', encoding='utf8') as f:
         sampa_dict = json.load(f)
 
-    write_lexicon(args.vocabulary, args.outfile, sampa_dict)
+    # print(len(sampa_dict))
+    # print(sum(len(i) for i in sampa_dict.values()))
+    # convert all keys to lowercase!
+    lowercased = defaultdict(list)
+    for k, v in sampa_dict.items():
+        for p in v:
+            lowercased[k.lower()].append(p)
+    # sampa_dict = {k.lower(): v for k, v in sampa_dict.items()}
+    # print(len(lowercased))
+    # print(sum(len(i) for i in lowercased.values()))
+    print('SAMPA pronunication dictionary contains:')
+    print('\t{} normalised forms'.format(len(lowercased)))
+    print('\t{} pronunciation entries'.format(sum(len(i) for i in lowercased.values())))
+
+
+    write_lexicon(args.vocabulary, args.outfile, lowercased)
 
 if __name__ == '__main__':
     main()

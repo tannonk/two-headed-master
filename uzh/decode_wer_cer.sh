@@ -57,11 +57,11 @@ dir=$3 # output directory
 srcdir=$4 # specify model directory explicitly to allow decoding to be written to decode out directory
 model=$srcdir/$iter.mdl
 
-
-echo ""
-echo "The following scoring options will be used: $scoring_opts"
-echo ""
-
+if [ ! -z "$scoring_opts" ]; then
+  echo ""
+  echo "The following scoring options will be used: $scoring_opts"
+  echo ""
+fi
 
 [ ! -z "$online_ivector_dir" ] && \
   extra_files="$online_ivector_dir/ivector_online.scp $online_ivector_dir/ivector_period"
