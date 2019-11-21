@@ -6,12 +6,21 @@
 
 set -e
 
+##################
+## Input arguments
+##################
+
 decode_dir=$1
 n2d_mapping=$2
+min_lmwt=${3:-"7"}
+max_lmwt=${4:-"17"}
+
+###############
+## Intermediate
+###############
+
 scoring_dir=$decode_dir/scoring_kaldi
 word_ins_penalty=0.0,0.5,1.0
-min_lmwt=1
-max_lmwt=50
 
 # decode/scoring_kaldi/penalty_0.5/7.txt
 

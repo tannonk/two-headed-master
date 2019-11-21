@@ -26,11 +26,12 @@ export LC_ALL=C
 scripts_dir=`dirname $0`
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
+nsn_word='<NOISE>'
 transcription='orig'
 pron_lex=''
 
 echo $0 $@
-while getopts 's:n:t:p:h' option; do
+while getopts 's:n:m:t:p:h' option; do
     case $option in
 	s)
 	    spn_word=${OPTARG}
@@ -38,6 +39,9 @@ while getopts 's:n:t:p:h' option; do
 	n)
 	    sil_word=${OPTARG}
 	    ;;
+  m)
+      nsn_word=${OPTARG}
+      ;;
 	t)
 	    transcription=${OPTARG} # allows to select original (orig) or normalised (norm)
 	    ;;
@@ -45,7 +49,7 @@ while getopts 's:n:t:p:h' option; do
 	    pron_lex=${OPTARG} # allows to select original (orig) or normalised (norm)
 	    ;;
 	h)
-	    echo "$0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] input_csv graphemic_clusters output_dir"
+	    echo "$0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-m '<NOISE>'] [-t orig'/'norm'] [-p 'norm2dieth.json'] input_csv graphemic_clusters output_dir"
 	    exit 0
 	    ;;
 	\?)
@@ -61,7 +65,7 @@ done
 shift $((OPTIND-1))
 
 if [[ $# -lt 4 ]]; then
-    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-t 'orig'/'norm'] [-p pronunciation lexicon] input_csv input_wav_dir graphemic_clusters output_dir"
+    echo "Wrong call. Should be: $0 [-s '<SPOKEN_NOISE>'] [-n '<SIL_WORD>'] [-m '<NOISE>'] [-t 'orig'/'norm'] [-p pronunciation lexicon] input_csv input_wav_dir graphemic_clusters output_dir"
     exit 1
 fi
 
@@ -108,8 +112,16 @@ echo -e "\nTRANSCRIPTION TYPE = $transcription\n"
 # mapped to less specific classes (see process_archimob.csv.py)
 echo "Processing $input_csv:"
 # Use -trans option only when the original input was XML!!
-$scripts_dir/process_archimob_csv.py -i $input_csv -trans $transcription -f -p \
-                     -t $output_trans -s $spn_word -n $sil_word -o $output_lst
+$scripts_dir/process_archimob_csv.py \
+    -i $input_csv \
+    -trans $transcription \
+    -f \
+    -p \
+    -t $output_trans \
+    --spn-word $spn_word \
+    --sil-word $sil_word \
+    --nsn-word $nsn_word \
+    -o $output_lst
 
 [[ $? -ne 0 ]] && echo -e "\n\tERROR calling process_archimob_csv.py" && exit 1
 
@@ -119,8 +131,12 @@ sort $output_lst -o $output_lst
 
 ##
 # 2.- Create the wav.scp, spk2utt, and utt2spk files:
-$scripts_dir/create_secondary_files.py -w $input_wav_dir -o $data_dir \
-				       train -i $input_csv -l $output_lst \
+$scripts_dir/create_secondary_files.py \
+    -w $input_wav_dir \
+    -o $data_dir \
+    train \
+    -i $input_csv \
+    -l $output_lst
 
 [[ $? -ne 0 ]] && echo -e "\n\tERROR calling create_secondary_files.py" && exit 1
 
@@ -206,7 +222,7 @@ cat $output_silences | awk ' { printf("%s ", $1) } END { printf "\n" } ' > $outp
 
 ##
 # 8.- Add to the lexicon the mapping for the silence word:
-echo -e "$sil_word SIL\n$spn_word SPN" | cat - $output_lexicon | sort -o $output_lexicon
+echo -e "$sil_word SIL\n$spn_word SPN\n$nsn_word NSN" | cat - $output_lexicon | sort -o $output_lexicon
 
 ##
 # 9.- Safety remove:

@@ -33,12 +33,12 @@ xpref=${xbase%.*} # cut the file name without extension
 echo "Extacting utterances..."
 cut -d, -f2 ${csv_file} | \
 sed '1d' | \
-perl -pe ' s#/##g; s#(\s)+#\1#g; s#^\s+##; ' \
+perl -pe ' s#<SPOKEN_NOISE>##g; s#<NOISE>##g; s#<SIL_WORD>##g; s#(\s)+#\1#g; s#^\s+##; ' \
 > ${xpath}/${xpref}_orig_utt.txt
 
 cut -d, -f3 ${csv_file} | \
 sed '1d' | \
-perl -pe ' s#/##g; s#(\s)+#\1#g; s#^\s+##; ' \
+perl -pe ' s#<SPOKEN_NOISE>##g; s#<NOISE>##g; s#<SIL_WORD>##g; s#(\s)+#\1#g; s#^\s+##; ' \
 > ${xpath}/${xpref}_norm_utt.txt
 
 # step 2: extract vocab

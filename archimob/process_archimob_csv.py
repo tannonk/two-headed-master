@@ -8,11 +8,10 @@ and creates the files needed by the Kaldi framework to run acoustic modeling
 Some processing is done on the input information:
 
 * Filtering:
-  * Chunks marked as no-relevant-speech or speech-in-speech are excluded from
-    the output
+  * Chunks marked as no-relevant-speech, missing_audio, anonymity or speech-in-speech are excluded from the output
 * Text processing:
   * Meta events, like hesitations, noises, ... are mapped to a smaller class
-    of symbols more appropriate for training.
+    of symbols more appropriate for training (if they weren't already when processing input XMLs!)
 
 Note that both filtering and text processing are disabled by default, but they
 can be enabled from the command line.
@@ -22,7 +21,6 @@ process_transcription underneath.
 """
 
 import sys
-
 import argparse
 import re
 import csv
@@ -31,6 +29,7 @@ import csv
 # Default symbol to denote everything with some kind of speech structure:
 # Note that it can be changed from the command line.
 SPN_SYMBOL = '<SPOKEN_NOISE>'
+NSN_SYMBOL = '<NOISE>'
 # Symbol to denote any noise without speech structure:
 SIL_SYMBOL = '<SIL_WORD>'
 
@@ -72,21 +71,25 @@ def get_args():
     parser.add_argument('--min-duration', '-d', help='Minimum duration for an' \
                         ' utterance to be accepted', type=float, default=0.0)
 
-    parser.add_argument('--spn-word', '-s', help='Word used to represent ' \
-                        'speech-like events (like unintelligible words, for ' \
-                        'example. Default = {0}'.format(SPN_SYMBOL),
+    parser.add_argument('--spn-word', help='Word used to represent ' \
+                        'speech-like events (e.g. unintelligible words. ' \
+                        'Default = {0}'.format(SPN_SYMBOL),
                         default=SPN_SYMBOL)
 
-    parser.add_argument('--sil-word', '-n', help='Word used to represent ' \
-                        'silence events (like breathing, for ' \
-                        'example. Default = {0}'.format(SIL_SYMBOL),
+    parser.add_argument('--sil-word', help='Word used to represent ' \
+                        'silence events (e.g. breathing. Default = {0}'.format(SIL_SYMBOL),
                         default=SIL_SYMBOL)
+
+    parser.add_argument('--nsn-word', help='Word used to represent ' \
+                        'non-speech like events (e.g. [laughter], [coughing])' \
+                        ' Default = {0}'.format(NSN_SYMBOL),
+                        default=NSN_SYMBOL)
 
     parser.add_argument('--output-trans', '-t', help='Output transcriptions ' \
                         'file', required=True)
 
-    parser.add_argument('--output-list', '-o', help='Output wave list',
-                        required=True)
+    parser.add_argument('--output-list', '-o', help='Output wave list. If not given, it is assumed, the processing is for the purpose of extracting clean text-level transcriptions suitable for training LM. If given the assumption is that the Kaldi training/decoding format is required.',
+                        required=False)
 
     return parser.parse_args()
 
@@ -189,6 +192,9 @@ def process_transcription(input_trans, mappings, spn_symbol):
         * spn_symbol (str): word to represent general speech
     returns:
         * a unicode string with the transformed annotations
+
+    ** NOTE **
+        Due to changes in process_exmaralda_xml.py, many of these normalisations have no effect. However, hesitations
     """
 
     verbose = False
@@ -212,12 +218,13 @@ def process_transcription(input_trans, mappings, spn_symbol):
     output = separate_group(output)
 
     # All (hopefully...) hesitation markers from Archimob:
-    hesitation_set = set([u'/ah/', u'/eh/', u'/eh', u'/hmm/', u'/ähm/',
-                          u'/ääm/', u'/ää/', u'/ehm/', u'/äwr/', u'/mhm/',
-                          u'/ähä/', u'/ä/', u'/ww/', u'/pff/', u'/hm/',
-                          u'/k/', u'/hä/', u'/aha/', u'/ähä/', u'/mpf/',
-                          u'/m/', u'/wiä/', u'/aa/', u'/äh/', u'/äw/', u'/e/',
-                          u'/mhmh/', u'/w/', u'/jo/',
+    # 19.11.19: added new items to this set - u'hmhmhmhm', u'hmhm', u'hmhmhm', u'mh'
+    hesitation_set = set([u'ah', u'eh', u'eh', u'hmm', u'ähm',
+                          u'ääm', u'ää', u'ehm', u'äwr', u'mhm',
+                          u'ähä', u'ä', u'ww', u'pff', u'hm',
+                          u'k', u'hä', u'aha', u'ähä', u'mpf',
+                          u'm', u'aa', u'äh', u'äw', u'e', u'mh',
+                          u'mhmh', u'w', u'hmhmhmhm', u'hmhm', u'hmhmhm',
                           u'ää', u'äää', u'äääää', u'ääääääää', u'ääm',
                           u'äämm', u'mm', u'mmm', u'üüü', u'ee', u'eee',
                           u'fff', u'ssss', u'ehm', u'eh'])
@@ -279,6 +286,9 @@ def process_transcription(input_trans, mappings, spn_symbol):
     output = output.replace('.', '')
     # Delete question marks:
     output = output.replace('?', '')
+    # Delete parentheses
+    output = output.replace('(', '')
+    output = output.replace(')', '')
 
     if verbose:
         print '\t\tOutput: {0}'.format(output.encode('utf8'))
@@ -314,12 +324,14 @@ def main():
         sys.stderr.write('Error creating {0} ({1})\n'.format(args.output_trans,
                                                              err))
         sys.exit(1)
-    try:
-        output_l = open(args.output_list, 'w')
-    except IOError as err:
-        sys.stderr.write('Error creating {0} ({1})\n'.format(args.output_list,
-                                                             err))
-        sys.exit(1)
+
+    if args.output_list:
+        try:
+            output_l = open(args.output_list, 'w')
+        except IOError as err:
+            sys.stderr.write('Error creating {0} ({1})\n'.format(args.output_list,
+                                                                 err))
+            sys.exit(1)
 
     csv_reader = csv.reader(input_f)
     n_filtered = 0
@@ -347,77 +359,76 @@ def main():
         #                                                   data_dict['duration'])
         #     continue
 
-        # Check filtering:
-        if args.type_transcription in ['orig', 'norm']:
-            if args.do_filtering or args.test_mode:
-                if int(data_dict['anonymity']) == 1 or \
-                   int(data_dict['speech_in_speech']) == 1 or \
-                   int(data_dict['missing_audio']) == 1 or \
-                   int(data_dict['no_relevant_speech']) == 1:
-                    if verbose:
-                        n_filtered += 1
-                        print '\tFiltering {0}. anonym={1};' \
-                        ' sp_in_sp={2};' \
-                        ' non_sp{3};' \
-                        ' non_sp{4}'.format(data_dict['utt_id'],
-                                            data_dict['anonymity'],
-                                            data_dict['speech_in_speech'],
-                                            data_dict['missing_audio'],
-                                            data_dict['no_relevant_speech'])
-                    continue
+        if args.type_transcription == 'norm':
+            transcription = data_dict['normalized']
         else:
-            if args.do_filtering or args.test_mode:
-                if int(data_dict['speech_in_speech']) == 1 or \
-                   int(data_dict['no_relevant_speech']) == 1:
-                    if verbose:
-                        print '\tFiltering {0}. anonym={1};' \
-                        ' sp_in_sp={2}; non_sp{3}'.format(data_dict['utt_id'],
-                                                          data_dict['anonymity'],
-                                                          data_dict['speech_in_speech'],
-                                                          data_dict['no_relevant_speech'])
-                    continue
+            transcription = data_dict['transcription'] # original Dieth transcription
 
+        # Check filtering:
+        if args.do_filtering or args.test_mode:
+            if int(data_dict['anonymity']) == 1 or \
+            int(data_dict['speech_in_speech']) == 1 or \
+            int(data_dict['missing_audio']) == 1 or \
+            int(data_dict['no_relevant_speech']) == 1:
+                n_filtered += 1
+                if verbose:
+                    print '\tFiltering {0}. anonym={1};' \
+                    ' sp_in_sp={2};' \
+                    ' non_sp{3};' \
+                    ' non_sp{4}'.format(data_dict['utt_id'],
+                                        data_dict['anonymity'],
+                                        data_dict['speech_in_speech'],
+                                        data_dict['missing_audio'],
+                                        data_dict['no_relevant_speech'])
+                continue
+
+        # 19.11.19: this no longer does anything, since items are already preprocessed in process_exmaralda_xml.py
         if args.test_mode:
             # Check unintelligible words without best guess:
-            if re.search(ur'\(\s*\?*\s*\)', data_dict['transcription']):
+            if re.search(ur'\(\s*\?*\s*\)', transcription):
                 if verbose:
                     print '\tFiltering {0} (unintelligible ' \
                         'word)'.format(data_dict['utt_id'])
                 continue
             # Truncated words:
-            if (re.search(ur'\w/', data_dict['transcription']) or
-                re.search(ur'/\w', data_dict['transcription'])):
+            if (re.search(ur'\w/', transcription) or
+                re.search(ur'/\w', transcription)):
                 if verbose:
                     print '\tFiltering {0} (truncated ' \
                         'word)'.format(data_dict['utt_id'])
                 continue
 
-        if args.type_transcription == 'orig':
-            if args.do_processing:
-                # Process text:
-                transcription = process_transcription(data_dict['transcription'],
-                                                      mappings, args.spn_word)
-            else:
-                # Just keep the original one as it is. You probably do not want to
-                # do this...
-                transcription = data_dict['transcription']
+        if args.do_processing:
+            # Process text:
+            transcription = process_transcription(transcription, mappings, args.spn_word)
+            # If do preprocessing is NOT TRUE, we keep the original one as it is.
+            # You probably do not want to do this...
 
-        elif args.type_transcription == 'norm':
-            transcription = data_dict['normalized']
+        if args.output_list: # if user has specified a wav list file as output argument, assume format should match kaldi expected input format
+            # Write the transcriptions file:
+            output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
+                                               transcription.encode('utf8')))
 
-        # Write the transcriptions file:
-	output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
-                                           transcription.encode('utf8')))
+            # Write the utterance list:
+            output_l.write('{0}\n'.format(data_dict['utt_id']))
 
-        # Write the utterance list:
-        output_l.write('{0}\n'.format(data_dict['utt_id']))
+        else: # otherwise, we assume the user wants just the clean transcriptions which are suitable for training a language model
+        # in this case, filter out meta tags <SPOKEN_NOISE>, <SIL_WORD>, <NOISE>
+            transcription = re.sub(u'<SPOKEN_NOISE>', u'', transcription)
+            transcription = re.sub(u'<SIL_WORD>', u'', transcription)
+            transcription = re.sub(u'<NOISE>', u'', transcription)
+            transcription = re.sub(ur'\s+', u' ', transcription.strip())
+            if transcription:
+                output_t.write('{}\n'.format(transcription.encode('utf8')))
 
-    if verbose:
-        print("{} transcriptions were filtered out.\n".format(n_filtered))
+
+    # if verbose:
+    print("{} transcriptions were filtered out while processing archimob csv.\n".format(n_filtered))
 
     input_f.close()
     output_t.close()
-    output_l.close()
+    if args.output_list:
+        output_l.close()
 
 
 if __name__ == '__main__':

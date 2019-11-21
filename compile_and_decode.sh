@@ -26,6 +26,7 @@ export LC_ALL=C # from compile_lingware.sh
 num_jobs=32  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
+nsn_word='<NOISE>'
 
 #####################################
 # Flags to choose with stages to run:
@@ -46,7 +47,9 @@ dev_csv=$3 # dev csv for decoding
 wav_dir=$4 # audio files for decoding
 output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
-norm2dieth_mapping=${7:-"/mnt/tannon/corpus_data/norm2dieth.json"}
+scoring_opts=${7:-"--min-lmwt 1 --max-lmwt 20"}
+norm2dieth_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
+
 
 #################
 # Existing files: cf. am_out/initial_data/ling/ vs am_out/data/lang/
@@ -226,8 +229,9 @@ if [[ $do_data_prep -ne 0 ]]; then
       -f \
       -p \
       -t $dev_transcriptions \
-      -s $spn_word \
-      -n $sil_word \
+      --spn-word $spn_word \
+      --sil-word $sil_word \
+      --nsn-word $nsn_word \
       -o $wav_lst
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1
@@ -310,8 +314,10 @@ if [[ $do_decoding -ne 0 ]]; then
     echo ""
 
     rm -rf $decode_dir/*
-    uzh/decode_wer_cer.sh --cmd "$decode_cmd" --nj $num_jobs $output_dir \
-        $lang_dir $decode_dir $model_dir
+    uzh/decode_wer_cer.sh --scoring_opts "$scoring_opts" \
+      --cmd "$decode_cmd" \
+      --nj $num_jobs $output_dir \
+      $lang_dir $decode_dir $model_dir
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during decoding\n" && exit 1
 
@@ -337,7 +343,10 @@ if [[ $do_additional_scoring -ne 0 ]]; then
 
     [[ ! -f $norm2dieth_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $norm2dieth_mapping\n" && exit 1
 
-    bash evaluation/score_f1.sh $decode_dir $norm2dieth_mapping
+    min_lmwt=`echo $scoring_opts | cut -d' ' -f2`
+    max_lmwt=`echo $scoring_opts | cut -d' ' -f4`
+    echo "Scoring F1 for LM wights $min_lmwt to $max_lmwt"
+    bash evaluation/score_f1.sh $decode_dir $norm2dieth_mapping $min_lmwt $max_lmwt
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 

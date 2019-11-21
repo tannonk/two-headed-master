@@ -13,6 +13,7 @@ set -u
 num_jobs=8  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
+nsn_word='<NOISE>'
 
 #####################################
 # Flags to choose with stages to run:
@@ -88,8 +89,9 @@ archimob/process_archimob_csv.py \
   -f \
   -p \
   -t $input_transcriptions \
-  -s $spn_word \
-  -n $sil_word \
+  --spn-word $spn_word \
+  --sil-word $sil_word \
+  --nsn-word $nsn_word \
   -o $output_lst
 
 [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1
