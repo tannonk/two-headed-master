@@ -12,7 +12,7 @@ set -u
 ################
 # Configuration:
 ################
-num_jobs=32  # Number of jobs for parallel processing
+num_jobs=8  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 nsn_word='<NOISE>'
@@ -23,7 +23,7 @@ nsn_word='<NOISE>'
 do_data_prep=1
 do_feature_extraction=1
 do_decoding=1
-# do_f1_scoring=1
+do_f1_scoring=1
 
 # This call selects the tool used for parallel computing: ($train_cmd)
 . cmd.sh
@@ -34,12 +34,6 @@ do_decoding=1
 # This parses any input option, if supplied.
 . utils/parse_options.sh
 
-echo $0 $@
-if [[ $# -lt 5 ]]; then
-    echo "Wrong call. Should be: $0 test_csv wav_dir graph_dir output_dir ['orig'/'norm']"
-    exit 1
-fi
-
 ##################
 # Input arguments:
 ##################
@@ -49,9 +43,11 @@ wav_dir=$2 # directory containing audio files
 am_dir=$3 # am_out directory (output of train_AM.sh, usually am_out/)
 graph_dir=$4 # out_ling, i.e. dir containing HCLG.fst
 output_dir=$5 # output directory for evaluation results
-lmwt=${6:-"10"} # this should be provided based upon the results of devset tuning
+lmwt=$6 # this should be provided based upon the results of devset tuning
 # scoring_opts=${7:-"--min-lmwt 10 --max-lmwt 10"}
 transcription=${7:-"orig"}
+n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"} # normalised 2 dieth transcription mapping
+# required for Scherrer modified F1 evaluation of final output.
 
 ###############
 # Intermediate:
@@ -69,6 +65,18 @@ feats_log_dir="$output_dir/feats/log"
 #########
 test_transcriptions="$tmp_dir/text"
 wav_lst="$tmp_dir/wav.lst"
+
+echo $0 $@
+if [[ $# -lt 6 ]]; then
+    echo "Wrong call. Please provide ALL input arguments explicitly."
+    echo "e.g. $0 \\"
+    echo "<test_csv_file> <wav_dir> <am_dir> <graph_dir>\\"
+    echo "<output_dir> <lmwt> <transcription_type ('orig'/'norm')> \\"
+    echo "[norm2dieth_mapping.json] (only required for modified"
+    echo "Scherrer F1 evaluation with original transcriptions)"
+    exit 1
+fi
+
 
 #####################################################################################
 
@@ -185,10 +193,25 @@ if [[ $do_decoding -ne 0 ]]; then
     $kaldi_output_dir \
     $model_dir
 
-    [[ $? -ne 0 ]] && echo -e '\n\tERROR: during decoding\n' && exit 1
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during decoding\n" && exit 1
 
 fi
 
+if [[ $transcription == "orig" && $do_f1_scoring -ne 0 ]]; then
+
+    echo ""
+    echo "#########################"
+    echo "### BEGIN: F1 SCORING ###"
+    echo "#########################"
+    echo ""
+
+    [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing normalised-to-dieth transcription mapping\n" && exit 1
+
+    uzh/score_f1.sh $kaldi_output_dir $n2d_mapping
+
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+
+fi
 
 CUR_TIME=$(date +%s)
 echo ""

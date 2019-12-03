@@ -9,11 +9,12 @@ export LC_ALL=C # from compile_lingware.sh
 ## Second, we extract features from test data.
 ## Finally, we decode the test data using the compiled graph.
 
-# Get the general configuration variables
-# (SPOKEN_NOISE_WORD, SIL_WORD and GRAPHEMIC_CLUSTERS)
+# Get the general configuration variables (SPOKEN_NOISE_WORD, SIL_WORD and
+# GRAPHEMIC_CLUSTERS)
 . uzh/configuration.sh
 
-# This call selects the tool used for parallel computing: ($train_cmd, $decode_cmd)
+# This call selects the tool used for parallel computing: ($train_cmd,
+# $decode_cmd)
 . cmd.sh
 
 # This includes in the path the kaldi binaries:
@@ -23,7 +24,7 @@ export LC_ALL=C # from compile_lingware.sh
 . utils/parse_options.sh
 
 # Relevant for decoding
-num_jobs=32  # Number of jobs for parallel processing
+num_jobs=8  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 nsn_word='<NOISE>'
@@ -35,7 +36,7 @@ do_compile_graph=1
 do_data_prep=1
 do_feature_extraction=1
 do_decoding=1
-do_additional_scoring=1
+do_f1_scoring=1
 
 ##################
 # Input arguments:
@@ -48,7 +49,7 @@ wav_dir=$4 # audio files for decoding
 output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
 scoring_opts=${7:-"--min-lmwt 1 --max-lmwt 20"}
-norm2dieth_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
+n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
 
 
 #################
@@ -56,8 +57,9 @@ norm2dieth_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
 #################
 
 am_ling_dir="$am_dir/initial_data/ling/" # equivalent to data/local/lang (input)
-# vocabulary="$am_dir/initial_data/tmp/vocabulary.txt" # initial vocab created by train_am
-# lexicon="$am_dir/initial_data/ling/lexicon.txt" # lexicon created by train_am
+# vocabulary="$am_dir/initial_data/tmp/vocabulary.txt" # initial vocab created
+# by train_am lexicon="$am_dir/initial_data/ling/lexicon.txt" # lexicon created
+# by train_am
 phone_table="$am_dir/data/lang/phones.txt" # created by train_am
 # tree="$am_dir/initial_data/ling/tree" NOT USED
 model_dir="$am_dir/models/discriminative/nnet_disc" # final model created by train_am
@@ -67,7 +69,8 @@ model_dir="$am_dir/models/discriminative/nnet_disc" # final model created by tra
 # Intermediate Directories:
 ###########################
 
-# lexicon="$tmp_dir/lexicon.txt" # created in train_am, removed to reduce repetition!
+# lexicon="$tmp_dir/lexicon.txt" # created in train_am, removed to reduce
+# repetition!
 tmp_dir="$output_dir/tmp"
 lexicon_tmp="$tmp_dir/lexicon"
 prepare_lang_tmp="$tmp_dir/prepare_lang_tmp"
@@ -105,11 +108,16 @@ START_TIME=$(date +%s) # record time of operations
 
 if [[ $do_compile_graph -ne 0 ]]; then
 
+
+    # Generate the lexicon fst:
+    # Instead of generating a lexicon again from scratch, we copy the one
+    # created in train_AM.sh.
+
     # # Generate the lexicon (text version):
-    # echo ""
-    # echo "#########################################"
-    # echo "### BEGIN: GENERATE LEXICON $lexicon ###"
-    # echo "#########################################"
+    # echo "" 
+    # echo "#########################################" 
+    # echo "### BEGIN: GENERATE LEXICON $lexicon ###" 
+    # echo "#########################################" 
     # echo ""
     #
     # archimob/create_lexicon.py \
@@ -117,28 +125,13 @@ if [[ $do_compile_graph -ne 0 ]]; then
     #   -c $GRAPHEMIC_CLUSTERS \
     #   -o $lexicon
     #
-    # [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit 1
-
-    # Add to the lexicon the mapping for the silence word:
-    # echo -e "$SIL_WORD SIL\n$SPOKEN_NOISE_WORD SPN" | cat - $lexicon | sort -o $lexicon
-
-    # copy lexicon.txt nonsilence_phones.txt optional_silence.txt  silence_phones.txt
-    # to out_dir/tmp/lexicon
-
-    # Generate the lexicon fst:
+    # [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit
+    # 1
 
     for f in lexicon.txt nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
         [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
         cp $am_ling_dir/$f $lexicon_tmp/
     done
-
-    # cp $lexicon $lexicon_tmp/lexicon.txt
-    # rm $lexicon_tmp/lexiconp.txt &> /dev/null
-
-    CUR_TIME=$(date +%s)
-    echo ""
-    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
-    echo ""
 
     echo ""
     echo "######################################"
@@ -174,7 +167,6 @@ if [[ $do_compile_graph -ne 0 ]]; then
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: generating $tmp_lang/G.fst\n" && exit 1
 
-
     set +e # don't exit on error
     fstisstochastic $tmp_lang/G.fst
     set -e # exit on error
@@ -195,16 +187,17 @@ if [[ $do_compile_graph -ne 0 ]]; then
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling mkgraph.sh\n" && exit 1
 
-    CUR_TIME=$(date +%s)
-    echo ""
-    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
-    echo ""
-
     echo ""
     echo "#####################################"
     echo "### COMPLETED: CONSTRUCTING GRAPH ###"
     echo "#####################################"
     echo ""
+
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
+
 
 fi
 
@@ -219,9 +212,10 @@ if [[ $do_data_prep -ne 0 ]]; then
     echo "### BEGIN: EXTRACT DEV TRANSCRIPTIONS AND WAVE LIST ###"
     echo "#######################################################"
     echo ""
-    # Note the options -f and -p: we are rejecting files with no-relevant-speech or
-    # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are
-    # mapped to less specific classes (see process_archimob.csv.py)
+    # Note the options -f and -p: we are rejecting files with no-relevant-speech
+    # or overlapping speech; also, Archimob markers (hesitations, coughing, ...)
+    # are mapped to less specific classes (see process_archimob.csv.py) 
+    
     # echo "Processing $dev_csv:"
     archimob/process_archimob_csv.py \
       -i $dev_csv \
@@ -294,16 +288,12 @@ fi
 ## 4. Decoding
 ##############
 
-# dependencies for decoding
-# for f in $dev_transcriptions $wav_dir $model_dir ; do
-#     [[ ! -e $f ]] && echo "Error. Missing input $f" && exit 1
-# done
+# dependencies for decoding for f in $dev_transcriptions $wav_dir $model_dir ;
+# do [[ ! -e $f ]] && echo "Error. Missing input $f" && exit 1 done
 
-# $output_dir --> graphdir=$1
-# srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory
-# $lang_dir --> data=$2
-# $decode_dir --> dir=$3
-# $model_dir --> srcdir=$4
+# $output_dir --> graphdir=$1 srcdir=`dirname $dir`; # Assume model directory
+# one level up from decoding directory $lang_dir --> data=$2 $decode_dir -->
+# dir=$3 $model_dir --> srcdir=$4
 
 if [[ $do_decoding -ne 0 ]]; then
 
@@ -333,7 +323,7 @@ if [[ $do_decoding -ne 0 ]]; then
 
 fi
 
-if [[ $do_additional_scoring -ne 0 ]]; then
+if [[ $transcription == "orig" && $do_f1_scoring -ne 0 ]]; then
 
     echo ""
     echo "#########################"
@@ -341,12 +331,9 @@ if [[ $do_additional_scoring -ne 0 ]]; then
     echo "#########################"
     echo ""
 
-    [[ ! -f $norm2dieth_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $norm2dieth_mapping\n" && exit 1
+    [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
 
-    min_lmwt=`echo $scoring_opts | cut -d' ' -f2`
-    max_lmwt=`echo $scoring_opts | cut -d' ' -f4`
-    echo "Scoring F1 for LM wights $min_lmwt to $max_lmwt"
-    bash evaluation/score_f1.sh $decode_dir $norm2dieth_mapping $min_lmwt $max_lmwt
+    uzh/score_f1.sh $decode_dir $n2d_mapping
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 

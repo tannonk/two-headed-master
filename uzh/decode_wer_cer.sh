@@ -51,16 +51,22 @@ if [ $# -ne 4 ]; then
 fi
 
 graphdir=$1 # e.g. /mnt/tannon/processed/archimob_r1/orig/decode_out
-data=$2 # e.g. /mnt/tannon/processed/archimob_r1/orig/decode_out/lang
-dir=$3 # output directory
+data=$2 # e.g. /mnt/tannon/processed/archimob_r1/orig/lang
+dir=$3 # output decode directory
 # srcdir=`dirname $dir`; # Assume model directory one level up from decoding directory. Commented out by TKEW.
 srcdir=$4 # specify model directory explicitly to allow decoding to be written to decode out directory
+# n2d_mapping=$5 # if provided, F1 is scored using uzh/score_f1.sh, which calls uzh/scherrer_eval.py
 model=$srcdir/$iter.mdl
 
+if [[ $# -lt 4 ]]; then
+    echo "Wrong call. Check positional input args..."
+    echo "e.g. $0 <graphdir> <data> <dir> <src_dir>\\"
+    exit 1
+fi
+
+
 if [ ! -z "$scoring_opts" ]; then
-  echo ""
-  echo "The following scoring options will be used: $scoring_opts"
-  echo ""
+  echo -e "\nThe following scoring options will be used: $scoring_opts...\n"
 fi
 
 [ ! -z "$online_ivector_dir" ] && \
@@ -130,7 +136,7 @@ elif grep 'transform-feats --utt2spk' $srcdir/log/train.1.log >&/dev/null; then
   echo "$0: **WARNING**: you seem to be using a neural net system trained with transforms,"
   echo "  but you are not providing the --transform-dir option in test time."
 fi
-##
+
 
 if [ ! -z "$online_ivector_dir" ]; then
   ivector_period=$(cat $online_ivector_dir/ivector_period) || exit 1;
@@ -139,6 +145,9 @@ if [ ! -z "$online_ivector_dir" ]; then
 fi
 
 if [ $stage -le 1 ]; then
+
+  echo -e "\nGenerating Lattices...\n"
+
   $cmd --num-threads $num_threads JOB=1:$nj $dir/log/decode.JOB.log \
     nnet-latgen-faster$thread_string \
      --minimize=$minimize --max-active=$max_active --min-active=$min_active --beam=$beam \
@@ -148,6 +157,9 @@ if [ $stage -le 1 ]; then
 fi
 
 if [ $stage -le 2 ]; then
+
+  echo -e "\nAnalyzing Lattices...\n"
+
   [ ! -z $iter ] && iter_opt="--iter $iter"
   steps/diagnostic/analyze_lats.sh --cmd "$cmd" $iter_opt $graphdir $dir
 fi
@@ -160,21 +172,25 @@ if [ $stage -le 3 ]; then
     [ ! -x uzh/score.sh ] && echo "Not scoring because uzh/score.sh does not exist or not executable." && exit 1;
     echo -e "\nScoring best paths for WER..."
     [ "$iter" != "final" ] && iter_opt="--iter $iter" # force --iter arg to final
-    uzh/score.sh $iter_opt $scoring_opts --cmd "$cmd" \
-    $data \
-    $graphdir \
-    $dir
+    uzh/score.sh $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
     echo -e "\n### Scoring WER completed ###"
-    # echo "score confidence and timing with sclite"
     echo -e "\nScoring best paths for CER..."
     [ ! -x uzh/score_cer.sh ] && echo "Not scoring because uzh/score_cer.sh does not exist or not executable." && exit 1;
-    uzh/score_cer.sh --stage 2 $iter_opt $scoring_opts --cmd "$cmd" \
-    $data \
-    $graphdir \
-    $dir
+    uzh/score_cer.sh --stage 2 $iter_opt $scoring_opts --cmd "$cmd" $data $graphdir $dir
     echo -e "\n### Scoring CER completed ###\n"
+    # if [[ ! -z $n2d_mapping ]]; then 
+        # echo -e "\nScoring best paths for F1..."
+    #     echo -e "\nScoring F1..."
+    #     uzh/score_f1.sh $dir $n2d_mapping
+    #     echo -e "\n### Scoring F1 completed ###\n"
+    # else
+    #     echo "Not scoring Scherrer's modified F1 because normalisation-to-dieth mapping not provided."
+    # fi
+  else
+    echo "Not scoring because requested so..."
+
   fi
 fi
 
-echo "### Decoding done. ###"
+echo -e "\n### Done $0 ###"
 exit 0;

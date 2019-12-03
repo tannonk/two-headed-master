@@ -27,13 +27,13 @@ num_gaussians=10000  # Number of Gaussians for the triphone stage
 #####################################
 ## This is helpful when running an experiment in several steps, to avoid
 # recomputing again all the stages from the very beginning.
-do_archimob_preparation=1
-do_data_preparation=1
-do_feature_extraction=1
-do_train_monophone=1
-do_train_triphone=1
-do_train_triphone_lda=1
-do_train_mmi=1
+do_archimob_preparation=0
+do_data_preparation=0
+do_feature_extraction=0
+do_train_monophone=0
+do_train_triphone=0
+do_train_triphone_lda=0
+do_train_mmi=0
 do_nnet2=1
 do_nnet2_discriminative=1
 
@@ -48,7 +48,7 @@ do_nnet2_discriminative=1
 
 echo $0 $@
 if [[ $# -lt 3 ]]; then
-    echo "Wrong call. Should be: $0 input_csv input_wav output_dir [transcription] [pronunciation lexicon]"
+    echo "Wrong call. Should be: $0 input_csv input_wav output_dir [transcription] [pronunciation mapping]"
     exit 1
 fi
 

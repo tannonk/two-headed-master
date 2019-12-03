@@ -101,9 +101,14 @@ for f in $input_csv $input_clusters; do
     [[ ! -e $f ]] && echo -e "\n\tERROR: missing input file $f" && exit 1
 done
 
+if [[ $transcription == "norm" && -z $pron_lex ]]; then
+    echo "ERROR: Using normalised transcriptions requires a pronunciation lexicon" && exit 1
+fi
+
 mkdir -p $output_dir $tmp_dir $data_dir $ling_dir
 
 echo -e "\nTRANSCRIPTION TYPE = $transcription\n"
+
 
 ##
 # 1.- Create the transcriptions and wave list:
