@@ -1,6 +1,6 @@
 ch	ch
 sch	sch
-tsch	tcsh z ch
+tsch	tcsh, z ch
 pf	pf
 ng	ng
 ph	ph
@@ -29,4 +29,4 @@ ai	ai
 au	au
 äu	äu
 ei	ei
-y	i ü
+y	i, ü
