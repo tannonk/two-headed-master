@@ -36,8 +36,7 @@ do_compile_graph=1
 do_data_prep=1
 do_feature_extraction=1
 do_decoding=1
-do_f1_scoring=1
-do_wer_flex_scoring=1
+do_f1_scoring=0
 
 ##################
 # Input arguments:
@@ -49,7 +48,7 @@ dev_csv=$3 # dev csv for decoding
 wav_dir=$4 # audio files for decoding
 output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
-scoring_opts=${7:-"--min-lmwt 7 --max-lmwt 17"}
+scoring_opts=${7:-"--min-lmwt 1 --max-lmwt 20"}
 n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
 # n2d_mapping=${8:-""}
 
@@ -219,7 +218,7 @@ if [[ $do_data_prep -ne 0 ]]; then
     # are mapped to less specific classes (see process_archimob.csv.py) 
     
     # echo "Processing $dev_csv:"
-    archimob/process_archimob_csv.py \
+    archimob_char/process_archimob_csv.py \
       -i $dev_csv \
       -trans $transcription \
       -f \
@@ -228,6 +227,7 @@ if [[ $do_data_prep -ne 0 ]]; then
       --spn-word $spn_word \
       --sil-word $sil_word \
       --nsn-word $nsn_word \
+      -c /home/tannon/kaldi_wrk/two-headed-master/manual/clusters.txt \
       -o $wav_lst
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1
@@ -242,7 +242,7 @@ if [[ $do_data_prep -ne 0 ]]; then
     echo "### BEGIN: CREATE SECONDARY FILES FOR KALDI ###"
     echo "###############################################"
     echo ""
-    archimob/create_secondary_files.py \
+    archimob_char/create_secondary_files.py \
       -w $wav_dir \
       -o $lang_dir \
       decode \
@@ -325,63 +325,21 @@ if [[ $do_decoding -ne 0 ]]; then
 
 fi
 
-if [[ $transcription == "orig" ]]; then
-
-    if [[ $do_f1_scoring -ne 0 ]]; then
-
-        echo ""
-        echo "#########################"
-        echo "### BEGIN: F1 SCORING ###"
-        echo "#########################"
-        echo ""
-
-        [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
-
-        uzh/score_f1.sh $decode_dir $n2d_mapping
-
-        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
-        
-    fi
-
-    if [[ $do_wer_flex_scoring -ne 0 ]]; then
+if [[ $transcription == "orig" && $do_f1_scoring -ne 0 ]]; then
 
     echo ""
-    echo "###############################"
-    echo "### BEGIN: WER FLEX SCORING ###"
-    echo "###############################"
+    echo "#########################"
+    echo "### BEGIN: F1 SCORING ###"
+    echo "#########################"
     echo ""
 
     [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
 
-    uzh/score_flex_wer.sh $decode_dir $n2d_mapping
+    uzh/score_f1.sh $decode_dir $n2d_mapping
 
-    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
-    
-    python3 evaluation/find_best_flexwer.py $decode_dir
-
-    fi
-
-else
-
-    if [[ $do_wer_flex_scoring -ne 0 ]]; then
-      echo ""
-      echo "###############################"
-      echo "### BEGIN: WER FLEX SCORING ###"
-      echo "###############################"
-      echo ""
-
-      uzh/score_flex_wer.sh $decode_dir
-
-      [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
-
-      python3 evaluation/find_best_flexwer.py $decode_dir
-
-      cp $decode_dir/scoring_kaldi/best_flexwer $output_dir
-
-    fi
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 
 fi
-
 
 CUR_TIME=$(date +%s)
 echo ""

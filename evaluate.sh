@@ -12,7 +12,7 @@ set -u
 ################
 # Configuration:
 ################
-num_jobs=8  # Number of jobs for parallel processing
+num_jobs=16  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 nsn_word='<NOISE>'
@@ -24,6 +24,8 @@ do_data_prep=1
 do_feature_extraction=1
 do_decoding=1
 do_f1_scoring=1
+do_wer_flex_scoring=1
+
 
 # This call selects the tool used for parallel computing: ($train_cmd)
 . cmd.sh
@@ -197,21 +199,61 @@ if [[ $do_decoding -ne 0 ]]; then
 
 fi
 
-if [[ $transcription == "orig" && $do_f1_scoring -ne 0 ]]; then
+if [[ $transcription == "orig" ]]; then
 
-    echo ""
-    echo "#########################"
-    echo "### BEGIN: F1 SCORING ###"
-    echo "#########################"
-    echo ""
+    if [[ $do_f1_scoring -ne 0 ]]; then
 
-    [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing normalised-to-dieth transcription mapping\n" && exit 1
+        echo ""
+        echo "#########################"
+        echo "### BEGIN: F1 SCORING ###"
+        echo "#########################"
+        echo ""
 
-    uzh/score_f1.sh $kaldi_output_dir $n2d_mapping
+        [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing normalised-to-dieth transcription mapping\n" && exit 1
 
-    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+        uzh/score_f1.sh $kaldi_output_dir $n2d_mapping
+
+        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+
+    fi
+
+    if [[ $do_wer_flex_scoring -ne 0 ]]; then
+
+        echo ""
+        echo "###############################"
+        echo "### BEGIN: WER FLEX SCORING ###"
+        echo "###############################"
+        echo ""
+
+        [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
+
+        uzh/score_flex_wer.sh $kaldi_output_dir $n2d_mapping
+
+        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+
+        python3 evaluation/find_best_flexwer.py $kaldi_output_dir
+
+    fi
+
+else
+
+    if [[ $do_wer_flex_scoring -ne 0 ]]; then
+        echo ""
+        echo "###############################"
+        echo "### BEGIN: WER FLEX SCORING ###"
+        echo "###############################"
+        echo ""
+
+        uzh/score_flex_wer.sh $kaldi_output_dir
+
+        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
+
+        python3 evaluation/find_best_flexwer.py $kaldi_output_dir    
+
+    fi
 
 fi
+
 
 CUR_TIME=$(date +%s)
 echo ""

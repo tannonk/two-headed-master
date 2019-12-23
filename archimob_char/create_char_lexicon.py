@@ -17,26 +17,32 @@ from collections import Counter
 # Signs to exclude from the transcriptions (when --add-signs is not specified)
 EXCLUDE_SET = set(["'", '-', '.'])
 
+
 def get_args():
     """
     Returns the command line arguments
     """
 
-    parser = argparse.ArgumentParser(description='Generates pronunciations for an input vocabulary by mapping clusters of graphemes to phonetic symbols')
+    parser = argparse.ArgumentParser(
+        description='Generates pronunciations for an input vocabulary by mapping clusters of graphemes to phonetic symbols')
 
     parser.add_argument('--vocabulary', '-v', help='Input vocabulary',
                         required=True)
 
-    parser.add_argument('--cluster-file', '-c', help='File with the consonant clusters', required=True)
+    parser.add_argument('--cluster-file', '-c',
+                        help='File with the consonant clusters', required=False)
 
-    parser.add_argument('--n2d', '-d', required=False, help='If provided, lexicon is created with a mapping from normalised to Dieth transcription forms. JSON file is expected')
+    parser.add_argument('--n2d', '-d', required=False,
+                        help='If provided, lexicon is created with a mapping from normalised to Dieth transcription forms. JSON file is expected')
 
-    parser.add_argument('--map-diacritic', '-m', help='Map compound diacritics to alternative character. If null, just recombines', default=None)
+    parser.add_argument('--map-diacritic', '-m', required=False,
+                        help='Map compound diacritics to alternative character. If null, just recombines', default=None)
 
     parser.add_argument('--output-file', '-o', help='Output lexicon',
                         required=True)
 
-    parser.add_argument('--verbose', required=False, action='store_true', help='Print progress to stdout.')
+    parser.add_argument('--verbose', required=False,
+                        action='store_true', help='Print progress to stdout.')
 
     args = parser.parse_args()
 
@@ -77,12 +83,14 @@ def process_unicode_compounds(data, map_diacritic=None):
     chunk = []
     tmp_chars = []
     for char in chars:
-        if unicodedata.combining(char): # check if characters has a combined diactritic
+        # check if characters has a combined diactritic
+        if unicodedata.combining(char):
             if map_diacritic:
                 chunk.append(map_diacritic)
                 # print(chars)
             else:
-                pass # remove additional length diacritics (they are used inconsistently anyway!)
+                # remove additional diacritics (they are used inconsistently anyway!)
+                pass
                 # chunk.append(char)
         else:
             chunk.append(char)
@@ -96,6 +104,7 @@ def process_unicode_compounds(data, map_diacritic=None):
 
     return chars
 
+
 def get_max_length(clusters_dict):
     """
     Calculates the maximum cluster length given the input 'clusters_dict'
@@ -105,6 +114,7 @@ def get_max_length(clusters_dict):
         if len(clust) > max_length_cluster:
             max_length_cluster = len(clust)
     return max_length_cluster
+
 
 def read_clusters(clusters_file, verbose=False):
     """
@@ -130,7 +140,8 @@ def read_clusters(clusters_file, verbose=False):
             fields = line.rstrip().split('\t')
 
             if len(fields) != 2:
-                sys.stderr.write('Error: the file {0} must have exactly two columns separated by tabs. Check {1}\n'.format(input_file, line))
+                sys.stderr.write(
+                    'Error: the file {0} must have exactly two columns separated by tabs. Check {1}\n'.format(input_file, line))
                 sys.exit(1)
 
             output[fields[0]] = fields[1].split()
@@ -139,6 +150,7 @@ def read_clusters(clusters_file, verbose=False):
                 print('\t{}'.format('-'.join(fields[1].split())))
 
     return output
+
 
 def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None, verbose=False):
     """
@@ -174,7 +186,8 @@ def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None, ve
                            graph_index, -1):
 
             if verbose:
-                print('\tIndex = {0}. Graph = {1}. Length = {2}'.format(index, graph_index, word_length))
+                print('\tIndex = {0}. Graph = {1}. Length = {2}'.format(
+                    index, graph_index, word_length))
 
             if index >= word_length:
                 continue
@@ -227,72 +240,31 @@ def main():
     # Get the command line arguments:
     args = get_args()
 
-    clusters = read_clusters(args.cluster_file)
-
-    max_length_cluster = get_max_length(clusters)
+    # clusters = read_clusters(args.cluster_file)
+    # max_length_cluster = get_max_length(clusters)
 
     try:
         input_f = open(args.vocabulary, 'r', encoding='utf8')
     except IOError as err:
-        sys.stderr.write('Error opening {0} ({1})\n'.format(args.vocabulary, err))
+        sys.stderr.write(
+            'Error opening {0} ({1})\n'.format(args.vocabulary, err))
         sys.exit(1)
 
     try:
         output_f = open(args.output_file, 'w', encoding='utf8')
     except IOError as err:
-        sys.stderr.write('Error creating {0} ({1})\n'.format(args.output_file, err))
+        sys.stderr.write(
+            'Error creating {0} ({1})\n'.format(args.output_file, err))
         sys.exit(1)
 
-    if args.n2d:
-        print('Creating lexicon for normalised transcriptions based upon mapping provided... {}'.format(args.n2d))
-        with open(args.n2d, 'r', encoding='utf8') as norm2dieth_file:
-            n2d_map = json.load(norm2dieth_file, encoding='utf8')
-
-            seen_pairs = set()
-            problem_words = Counter()
-
-            for word in input_f:
-
-                word = word.rstrip()
-
-
-                dieth_forms = n2d_map.get(word)
-
-                # print(dieth_forms)
-                if not dieth_forms:
-                    problem_words[word] += 1
-                    # print('WORD:', word)
-                    continue
-
-
-                for form in set(dieth_forms):
-                    transcription = transcribe_simple(form.lower(), clusters, max_length_cluster, args.map_diacritic)
-
-                    for multi in transcription:
-                        # avoid duplicates in lexicon!
-                        if (word, multi) not in seen_pairs:
-                            output_f.write('{0} {1}\n'.format(word, multi))
-                            seen_pairs.add((word, multi))
-
-            if problem_words:
-                print('\t{} problematic words'.format(len(problem_words)))
-                for i, w in enumerate(problem_words):
-                    if i < 10:
-                        print('\t', w)
-
-    else:
-        print('Creating naive lexicon for Dieth transcriptions...')
-        for word in input_f:
-
-            word = word.rstrip()
-
-            transcription = transcribe_simple(word.lower(), clusters, max_length_cluster, args.map_diacritic)
-
-            for multi in transcription:
-                output_f.write('{0} {1}\n'.format(word, multi))
+    for w in input_f:
+        w = w.strip()
+        if w:
+            output_f.write('{} {}\n'.format(w.strip(), w.strip()))
 
     output_f.close()
     input_f.close()
+
 
 if __name__ == '__main__':
     main()
