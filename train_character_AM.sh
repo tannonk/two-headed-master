@@ -105,7 +105,7 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     echo "###################################"
     echo ""
 
-    archimob/prepare_Archimob_training_files.sh \
+    archimob_char/prepare_Archimob_training_files.sh \
       -s "$SPOKEN_NOISE_WORD" \
 			-n "$SIL_WORD" \
       -m "$NOISE_WORD" \
