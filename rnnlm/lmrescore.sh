@@ -10,13 +10,13 @@
 ## Configuration
 ################
 
-do_lattice_rescore=0
+do_lattice_rescore=1
 do_scoring=1
 # skip_scoring=false
 
 
 cmd=run.pl
-max_ngram_order=4 # Approximate the lattice-rescoring by limiting the max-ngram-order
+max_ngram_order=5 #4 # Approximate the lattice-rescoring by limiting the max-ngram-order
                   # if it's set, it merges histories in the lattice if they share
                   # the same ngram history and this prevents the lattice from 
                   # exploding exponentially. Details of the n-gram approximation
@@ -70,10 +70,17 @@ indir=$4
 # /mnt/tannon/processed/archimob_r1/orig/rnnlm_rescore/rescore_out
 outdir=$5
 
+min_lmwt=${6:-7}
+max_lmwt=${7:-17}
+
 # if provided, F1 is scored using uzh/score_f1.sh, which
 # calls uzh/scherrer_eval.py e.g.
 # /mnt/tannon/corpus_data/norm2dieth.json
-n2d_mapping=${6:-""}
+n2d_mapping=${8:-""}
+
+if [[ $min_lmwt -gt $max_lmwt ]]; then
+    echo -e "\tERROR: min LMWT cannot be greater than max LMWT" && exit 1;
+fi
 
 START_TIME=$(date +%s) # record time of operations
 
@@ -208,7 +215,7 @@ if [[ $do_scoring -ne 0 ]]; then
 
   [ ! -x uzh/score.sh ] && echo "Not scoring because uzh/score.sh does not exist or not executable." && exit 1;
   echo -e "\nScoring best paths for WER..."
-  uzh/score.sh --cmd "$cmd" $data $oldlang $outdir
+  uzh/score.sh --cmd "$cmd" --min_lmwt $min_lmwt --max_lmwt $max_lmwt $data $oldlang $outdir
   echo -e "\n### Scoring WER completed ###"
 
   CUR_TIME=$(date +%s)
@@ -218,7 +225,7 @@ if [[ $do_scoring -ne 0 ]]; then
 
   echo -e "\nScoring best paths for CER..."
   [ ! -x uzh/score_cer.sh ] && echo "Not scoring because uzh/score_cer.sh does not exist or not executable." && exit 1;
-  uzh/score_cer.sh --stage 2 --cmd "$cmd" $data $oldlang $outdir
+  uzh/score_cer.sh --stage 2 --cmd "$cmd" --min_lmwt $lmwt --max_lmwt $lmwt $data $oldlang $outdir
   echo -e "\n### Scoring CER completed ###\n"
 
   CUR_TIME=$(date +%s)

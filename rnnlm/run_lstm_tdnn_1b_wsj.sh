@@ -31,6 +31,10 @@ lexicon=$2 # lexiconp.txt
 text_dir=$3 # output text dir (gets created) --> orig/rnnlm_rescore/text
 out_dir=$4 # orig/rnnlm_rescore/model or orig/rnnlm_rescore/out
 
+# # for rescoring
+# oldlang=$5
+
+
 #########
 ## Config
 #########
@@ -43,20 +47,20 @@ train_rnnlm=1
 
 # dir=exp/rnnlm_lstm_tdnn_1b
 use_gpu=false
-embedding_dim=800
-lstm_rpd=200
-lstm_nrpd=200
+embedding_dim=128 # 800
+lstm_rpd=64 # 200
+lstm_nrpd=64 # 200
 embedding_l2=0.001 # embedding layer l2 regularize
 comp_l2=0.001 # component-level l2 regularize
 output_l2=0.001 # output-layer l2 regularize
-epochs=20
+epochs=15 # 20
 stage=-10
 train_stage=-10
 
 # variables for rnnlm rescoring
-ac_model_dir=exp/chain/tdnn_lstm1b_sp
-ngram_order=4
-decode_dir_suffix=rnnlm
+# ac_model_dir=exp/chain/tdnn_lstm1b_sp
+# ngram_order=4
+# decode_dir_suffix=rnnlm
 
 . ./cmd.sh
 . ./utils/parse_options.sh
@@ -151,8 +155,10 @@ EOF
   # choose features
   rnnlm/choose_features_2.py --unigram-probs=$out_dir/config/unigram_probs.txt \
                            --use-constant-feature=true \
-                           --top-word-features=50000 \
-                           --min-frequency 1.0e-03 \
+                           --min-ngram-order=1 \
+                           --max-ngram-order=4 \
+                           --top-word-features=1000 \
+                           --min-frequency 1.0e-06 \
                            --special-words='<s>,</s>,<brk>,<SPOKEN_NOISE>' \
                            $out_dir/config/words.txt > $out_dir/config/features.txt
 
@@ -171,7 +177,9 @@ fast-lstmp-layer name=lstm2 cell-dim=$embedding_dim recurrent-projection-dim=$ls
 relu-renorm-layer name=tdnn3 dim=$embedding_dim $tdnn_opts input=Append(0, IfDefined(-1))
 output-layer name=output $output_opts include-log-softmax=false dim=$embedding_dim
 EOF
+  
   rnnlm/validate_config_dir.sh $text_dir $out_dir/config
+
 fi
 
 if [[ $stage -le 2 && $prep_rnnlm_dir -ne 0 ]]; then
@@ -213,16 +221,7 @@ if [[ $stage -le 3 && $train_rnnlm -ne 0 ]]; then
 
 fi
 
-CUR_TIME=$(date +%s)
-echo ""
-echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
-echo ""
-
-# LM=tgpr
 # if [ $stage -le 4 ]; then
-#   for decode_set in dev93 eval92; do
-#     decode_dir=${ac_model_dir}/decode_looped_${LM}_${decode_set}
-
 #     # Lattice rescoring
 #     rnnlm/lmrescore_pruned.sh \
 #       --cmd "$decode_cmd --mem 4G" \
@@ -233,6 +232,11 @@ echo ""
 #   done
 #   wait
 # fi
+
+CUR_TIME=$(date +%s)
+echo ""
+echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+echo ""
 
 echo ""
 echo "### DONE: $0 ###"
