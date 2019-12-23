@@ -49,7 +49,7 @@ for wip in $(echo $word_ins_penalty | sed 's/,/ /g'); do
     output_file="$decode_dir/f1_${lmwt}_${wip}"
     [ ! -f $hyp_file ] && echo -e "ERROR: Missing file $hyp_file" && exit 1;
     echo "Scoring $hyp_file..."
-    python3 uzh/scherrer_eval.py \
+    python3 evaluation/scherrer_eval.py \
     --ref $scoring_dir/test_filt.txt \
     --hyp $hyp_file \
     -d $n2d_mapping \
