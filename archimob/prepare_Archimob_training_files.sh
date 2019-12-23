@@ -166,7 +166,7 @@ if [[ $transcription = "norm" ]]; then
 
     echo "Generating the lexicon with SAMPA transcriptions: $output_lexicon"
     # specify python3 for script to create sampa lexicon
-    python3 $scripts_dir/create_sampa_normalised_lexicon.py \
+    python $scripts_dir/create_sampa_normalised_lexicon.py \
       -v $vocabulary \
       -s $pron_lex \
       -o $output_lexicon
@@ -177,7 +177,7 @@ if [[ $transcription = "norm" ]]; then
 
     echo "Generating the lexicon with Dieth transcriptions: $output_lexicon"
 
-    python3 $scripts_dir/create_lexicon.py \
+    python $scripts_dir/create_simple_lexicon.py \
       -v $vocabulary \
       -c $input_clusters \
       -d $pron_lex \
@@ -194,7 +194,7 @@ if [[ $transcription = "norm" ]]; then
 else
 
   echo "Generating the lexicon for original transcription: $output_lexicon"
-  python3 $scripts_dir/create_lexicon.py \
+  python3 $scripts_dir/create_simple_lexicon.py \
     -v $vocabulary \
     -c $input_clusters \
     -o $output_lexicon

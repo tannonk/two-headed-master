@@ -8,16 +8,14 @@ phone
 """
 
 import sys
+import json
 import re
 import argparse
 import unicodedata
-import json
 import codecs
-from collections import Counter
 
 # Signs to exclude from the transcriptions (when --add-signs is not specified)
-EXCLUDE_SET = set(["'", '-', '.', '==', '***', '/',
-                   '<SPOKEN_NOISE>', '<NOISE>', '<SIL>'])
+EXCLUDE_SET = set(["'", '-', '.'])
 
 
 def get_args():
@@ -36,9 +34,6 @@ def get_args():
     parser.add_argument('--cluster-file', '-c', help='File with the consonant'
                         ' clusters', required=True)
 
-    parser.add_argument('--n2d', '-d', required=True,
-                        help='Normalised to Dieth transcription mapping. JSON file is expected')
-
     parser.add_argument('--map-diacritic', '-m', help='Map compound '
                         'diacritics to alternative character. If null, '
                         'just recombines', default=u'1')
@@ -46,8 +41,8 @@ def get_args():
     parser.add_argument('--output-file', '-o', help='Output lexicon',
                         required=True)
 
-    parser.add_argument('--verbose', required=False,
-                        action='store_true', help='Print progress to stdout.')
+    parser.add_argument('--n2d', '-d', required=False,
+                        help='If provided, lexicon is created with a mapping from normalised to Dieth transcription forms. JSON file is expected')
 
     args = parser.parse_args()
 
@@ -156,53 +151,6 @@ def read_clusters(input_file):
 
     return output
 
-# def read_clusters(input_file):
-#     """
-#     Reads the file with the clusters
-#     input:
-#         * input_file (str) name of the input file, with the consonant
-#           clusters and their mappings to some phoneme name ("cluster" "phone")
-#     returns:
-#         * a dictionary with the clusters as keys, and the corresponding phones
-#           as values
-#     """
-
-#     verbose = False
-
-#     output = {}
-
-#     try:
-#         input_f = open(input_file, 'r')
-#     except IOError as err:
-#         sys.stderr.write('Error opening {0} ({1})\n'.format(input_file, err))
-#         sys.exit(1)
-
-#     if verbose:
-#         print 'In read_clusters:'
-
-#     for line in input_f:
-
-#         if verbose:
-#             print '\tLine = ' + line
-
-#         line = line.decode('utf8').rstrip()
-#         fields = re.split(r'\t', line)
-
-#         if len(fields) != 2:
-#             sys.stderr.write('Error: the file {0} must have exactly two '
-#                              'columns separated by tabs. '
-#                              'See {1}\n'.format(input_file, line))
-#             sys.exit(1)
-
-#         output[fields[0]] = re.split(r'\s*,\s*', fields[1])
-
-#         if verbose:
-#             print '\t' + '-'.join(re.split(r'\s*,\s*', fields[1])) + '\n'
-
-#     input_f.close()
-
-#     return output
-
 
 def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None):
     """
@@ -226,10 +174,10 @@ def transcribe_simple(word, clusters, max_length_cluster, map_diacritic=None):
 
     graph_index = 0
 
-    # if verbose:
-    #     print 'Input word: ' + word.encode('utf8')
-    #     import pdb
-    #     pdb.set_trace()
+    if verbose:
+        print 'Input word: ' + word.encode('utf8')
+        import pdb
+        pdb.set_trace()
 
     while graph_index < word_length:
 
@@ -309,18 +257,7 @@ def main():
             max_length_cluster = len(clust)
 
     try:
-        # with codecs.open(args.n2d, 'r', encoding='utf8') as norm2dieth_file:
-        # norm2dieth_file = open(args.n2d, 'r')
-        norm2dieth_file = codecs.open(args.n2d, 'r', encoding='utf8')
-        n2d_map = json.load(norm2dieth_file, encoding='utf8')
-        norm2dieth_file.close()
-    except IOError as err:
-        sys.stderr.write('Error opening {0} ({1})\n'.format(args.n2d, err))
-        sys.exit(1)
-
-    try:
         input_f = open(args.vocabulary, 'r')
-        # input_f = codecs.open(args.vocabulary, 'r', encoding='utf8')
     except IOError as err:
         sys.stderr.write('Error opening {0} ({1})\n'.format(args.vocabulary,
                                                             err))
@@ -333,50 +270,63 @@ def main():
                                                              err))
         sys.exit(1)
 
-    # print n2d_map
+    ####
+    if args.n2d:
+        print 'Creating lexicon for normalised transcriptions based upon mapping provided... {}'.format(args.n2d)
 
-    seen_pairs = set()
+        seen_pairs = set()
 
-    problem_words = Counter()
+        with codecs.open(args.n2d, 'r', encoding='utf8') as norm2dieth_file:
+            # norm2dieth_file = open(args.n2d, 'r')
+            n2d_map = json.load(norm2dieth_file, encoding='utf8')
 
-    for word in input_f:
+        for word in input_f:
 
-        word = word.rstrip().decode('utf8')
-
-        if isinstance(args.map_diacritic, str):
-            # print args.map_diacritic
-            args.map_diacritic = args.map_diacritic.decode('utf8')
-
-        # print "ORIGINAL", word
-        # if word == u'/': # skip silence markers
-        #     continue
-
-        # print "DECODED", word
-
-        dieth_forms = n2d_map.get(word)
-
-        # print dieth_forms
-        if not dieth_forms:
+            # word = word.rstrip()
+            word = word.rstrip().decode('utf8')
             # print word
-            problem_words[word] += 1
-            continue
+            if isinstance(args.map_diacritic, str):
+                args.map_diacritic = args.map_diacritic.decode('utf8')
 
-        for form in set(dieth_forms):
-            transcription = transcribe_simple(form.lower(), clusters,
+            dieth_forms = n2d_map.get(word)
+            # print dieth_forms
+            if dieth_forms:
+                for form in dieth_forms:
+                    # print dieth_forms
+                    transcription = transcribe_simple(
+                        form.lower(), clusters, max_length_cluster, args.map_diacritic)
+
+                    # print transcription
+                    for multi in transcription:
+                        # print multi
+                        # avoid duplicates in lexicon!
+                        if (word, multi) not in seen_pairs:
+                            output_f.write('{} {}\n'.format(
+                                word.encode('utf8'),
+                                multi.encode('utf8')
+                            )
+                            )
+                            seen_pairs.add((word, multi))
+            # else:
+            #     print 'Problem word ' + word.encode('utf8')
+                # print 'Problem word ' + word
+
+    ####
+
+    else:
+        for word in input_f:
+
+            word = word.rstrip().decode('utf8')
+            if isinstance(args.map_diacritic, str):
+                args.map_diacritic = args.map_diacritic.decode('utf8')
+
+            transcription = transcribe_simple(word.lower(), clusters,
                                               max_length_cluster,
                                               args.map_diacritic)
 
             for multi in transcription:
-                # avoid duplicates in lexicon!
-                if (word, multi) not in seen_pairs:
-                    output_f.write('{0} {1}\n'.format(
-                        word.encode('utf8'), multi.encode('utf8')))
-                    seen_pairs.add((word, multi))
-
-    if problem_words:
-        print "{} problematic words".format(len(problem_words))
-        # for i in problem_words:
-        #     print i
+                output_f.write('{0} {1}\n'.format(word.encode('utf8'),
+                                                  multi.encode('utf8')))
 
     output_f.close()
     input_f.close()
