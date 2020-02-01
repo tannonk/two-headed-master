@@ -318,7 +318,17 @@ def process_transcription(input_trans, mappings, spn_symbol, clusters=None):
         else:
             new_out.append(transcribe_simple(w, clusters))
     # output = [transcribe_simple(w, clusters) for w in output.split()]
-    output = u' <w> '.join(new_out)
+
+    new_new_out = []
+
+    for i in new_out:
+        if i in [u'<SPOKEN_NOISE>', u'<SIL_WORD>', u'<NOISE>']:
+            new_new_out.append(i)
+        else:
+            new_new_out.append(i+'@')
+
+    output = ' '.join(new_new_out)
+
     # print output
 
     if verbose:
@@ -660,7 +670,9 @@ def main():
             transcription = re.sub(ur'<SPOKEN_NOISE>\s?(<w>)?', u'', transcription)
             transcription = re.sub(ur'<SIL_WORD>\s?(<w>)?', u'', transcription)
             transcription = re.sub(ur'<NOISE>\s?(<w>)?', u'', transcription)
+            # transcription = re.sub(ur'@', u'', transcription)
             transcription = re.sub(ur'\s+', u' ', transcription.strip())
+
             if transcription:
                 output_t.write('{}\n'.format(transcription.encode('utf8')))
 
