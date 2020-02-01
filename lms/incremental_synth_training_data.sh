@@ -8,16 +8,14 @@ set -e
 
 dir=$1
 maxn=${2:-200000}
-vocabulary=${3:-''}
 
 step=10000
 minn=10000
 train_file=$dir/train.txt
 dev_file=$dir/dev.txt
 test_file=$dir/test.txt
-# vocabulary=$dir/vocab.txt
 
-lm_order=3
+lm_order=4
 
 mkdir -p $dir/splits
 
@@ -31,42 +29,18 @@ for n in $(seq $minn $step $maxn); do
     
     echo "Training on $dir/splits/train_$n.txt..."
 
-    if [[ ! -z $vocabulary ]]; then
+    estimate-ngram -order $lm_order \
+        -text $dir/splits/train_$n.txt \
+        -opt-perp $dev_file \
+        -eval-perp $test_file
+    
+    wait 
 
-        estimate-ngram -order $lm_order \
-            -text $dir/splits/train_$n.txt \
-            -opt-perp $dev_file \
-            -eval-perp $test_file \
-            -vocab $vocabulary \
-            -unk "true"
-
-        wait 
-
-        rm $dir/splits/train_$n.txt
-
-    else
-        
-        estimate-ngram -order $lm_order \
-            -text $dir/splits/train_$n.txt \
-            -opt-perp $dev_file \
-            -eval-perp $test_file \
-            -vocab $vocabulary
-        
-        wait 
-
-        rm $dir/splits/train_$n.txt
-
-    fi
-
+    rm $dir/splits/train_$n.txt
 
 done
 
 
-# estimate-ngram -order $lm_order \
-#     -text $dir/splits/train_$n.txt \
-#     -opt-perp $dev_file \
-#     -eval-perp $test_file \
-#     -vocab $vocabulary
 
 # all_data_train=$( cat $train_file /mnt/tannon/corpus_data/gsw_data/proc.tatoeba_gsw.txt /mnt/tannon/corpus_data/gsw_data/proc.transcripts_schawinski.txt /mnt/tannon/corpus_data/gsw_data/proc.noah.txt /mnt/tannon/corpus_data/gsw_data/proc.transcripts_phonogrammarchiv.txt /mnt/tannon/corpus_data/gsw_data/proc.ch_web_2017.txt )
 
