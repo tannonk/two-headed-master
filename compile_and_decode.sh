@@ -51,6 +51,7 @@ output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
 scoring_opts=${7:-"--min-lmwt 7 --max-lmwt 17"}
 n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
+vocabulary=${9:-''}
 # n2d_mapping=${8:-""}
 
 
@@ -110,30 +111,58 @@ START_TIME=$(date +%s) # record time of operations
 
 if [[ $do_compile_graph -ne 0 ]]; then
 
+    if [[ ! -z $vocabulary ]]; then
 
-    # Generate the lexicon fst:
-    # Instead of generating a lexicon again from scratch, we copy the one
-    # created in train_AM.sh.
+      # Generate the lexicon fst:
+      # Instead of generating a lexicon again from scratch, we copy the one
+      # created in train_AM.sh.
 
-    # # Generate the lexicon (text version):
-    # echo "" 
-    # echo "#########################################" 
-    # echo "### BEGIN: GENERATE LEXICON $lexicon ###" 
-    # echo "#########################################" 
-    # echo ""
-    #
-    # archimob/create_lexicon.py \
-    #   -v $vocabulary \
-    #   -c $GRAPHEMIC_CLUSTERS \
-    #   -o $lexicon
-    #
-    # [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit
-    # 1
+      lexicon="$lexicon_tmp/lexicon.txt"
 
-    for f in lexicon.txt nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
-        [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
-        cp $am_ling_dir/$f $lexicon_tmp/
-    done
+      # Generate the lexicon (text version):
+      echo "" 
+      echo "###############################" 
+      echo "### BEGIN: GENERATE LEXICON ###" 
+      echo "###############################" 
+      echo ""
+      
+      # python3 archimob/create_simple_lexicon.py \
+      #   -v $vocabulary \
+      #   -c $GRAPHEMIC_CLUSTERS \
+      #   -o $lexicon
+
+      archimob/create_simple_lexicon_2.py \
+        -v $vocabulary \
+        -c $GRAPHEMIC_CLUSTERS \
+        -o $lexicon
+      
+      [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit 1
+
+      # Add to the lexicon the mapping for the silence word:
+      echo -e "$NOISE_WORD NSN\n$SIL_WORD SIL\n$SPOKEN_NOISE_WORD SPN\n" | cat - $lexicon | \
+          sort | uniq | sort -o $lexicon
+
+      sed -i '/^$/d' $lexicon
+
+      # Generate the lexicon fst:
+      for f in nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
+          [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && \
+        exit 1
+          cp $am_ling_dir/$f $lexicon_tmp/
+      done
+
+      # cp $lexicon $lexicon_tmp/lexicon.txt
+      rm $lexicon_tmp/lexiconp.txt &> /dev/null
+    
+    else
+
+      for f in lexicon.txt nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
+          [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
+          cp $am_ling_dir/$f $lexicon_tmp/
+      done
+
+    fi    
+    
 
     echo ""
     echo "######################################"
@@ -357,11 +386,9 @@ if [[ $transcription == "orig" ]]; then
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
     
-    python3 evaluation/find_best_flexwer.py $decode_dir
-
     fi
 
-else
+else # do flex wer scoring without norm2dieth mapping
 
     if [[ $do_wer_flex_scoring -ne 0 ]]; then
       echo ""
@@ -374,13 +401,14 @@ else
 
       [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
 
-      python3 evaluation/find_best_flexwer.py $decode_dir
-
-      cp $decode_dir/scoring_kaldi/best_flexwer $output_dir
-
     fi
 
 fi
+
+python3 evaluation/find_best_scores.py $decode_dir
+
+cp $decode_dir/scoring_kaldi/best_flexwer $output_dir 2>/dev/null || :
+cp $decode_dir/scoring_kaldi/best_f1 $output_dir 2>/dev/null || :
 
 
 CUR_TIME=$(date +%s)

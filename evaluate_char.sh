@@ -105,7 +105,7 @@ if [[ $do_data_prep -ne 0 ]]; then
     # overlapping speech; also, Archimob markers (hesitations, coughing, ...) are
     # mapped to less specific classes (see process_archimob.csv.py)
     # echo "Processing $test_csv:"
-    archimob/process_archimob_csv.py \
+    archimob_char/process_archimob_csv.py \
       -i $test_csv \
       -trans $transcription \
       -f \
@@ -114,7 +114,19 @@ if [[ $do_data_prep -ne 0 ]]; then
       --spn-word $spn_word \
       --sil-word $sil_word \
       --nsn-word $nsn_word \
+      -c /home/tannon/kaldi_wrk/two-headed-master/manual/clusters.txt \
       -o $wav_lst
+
+    # archimob/process_archimob_csv.py \
+    #   -i $test_csv \
+    #   -trans $transcription \
+    #   -f \
+    #   -p \
+    #   -t $test_transcriptions \
+    #   --spn-word $spn_word \
+    #   --sil-word $sil_word \
+    #   --nsn-word $nsn_word \
+    #   -o $wav_lst
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling process_archimob_csv.py\n" && exit 1
 
@@ -128,7 +140,7 @@ if [[ $do_data_prep -ne 0 ]]; then
     echo "### BEGIN: CREATE SECONDARY FILES FOR KALDI ###"
     echo "###############################################"
     echo ""
-    archimob/create_secondary_files.py \
+    archimob_char/create_secondary_files.py \
       -w $wav_dir \
       -o $lang_dir \
       decode \
@@ -199,58 +211,58 @@ if [[ $do_decoding -ne 0 ]]; then
 
 fi
 
-if [[ $transcription == "orig" ]]; then
+# if [[ $transcription == "orig" ]]; then
 
-    if [[ $do_f1_scoring -ne 0 ]]; then
+#     if [[ $do_f1_scoring -ne 0 ]]; then
 
-        echo ""
-        echo "#########################"
-        echo "### BEGIN: F1 SCORING ###"
-        echo "#########################"
-        echo ""
+#         echo ""
+#         echo "#########################"
+#         echo "### BEGIN: F1 SCORING ###"
+#         echo "#########################"
+#         echo ""
 
-        [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing normalised-to-dieth transcription mapping\n" && exit 1
+#         [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing normalised-to-dieth transcription mapping\n" && exit 1
 
-        uzh/score_f1.sh $kaldi_output_dir $n2d_mapping
+#         uzh/score_f1.sh $kaldi_output_dir $n2d_mapping
 
-        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+#         [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 
-    fi
+#     fi
 
-    if [[ $do_wer_flex_scoring -ne 0 ]]; then
+#     if [[ $do_wer_flex_scoring -ne 0 ]]; then
 
-        echo ""
-        echo "###############################"
-        echo "### BEGIN: WER FLEX SCORING ###"
-        echo "###############################"
-        echo ""
+#         echo ""
+#         echo "###############################"
+#         echo "### BEGIN: WER FLEX SCORING ###"
+#         echo "###############################"
+#         echo ""
 
-        [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
+#         [[ ! -f $n2d_mapping ]] && echo -e "\n\tERROR: Cannot score F1. Missing $n2d_mapping\n" && exit 1
 
-        uzh/score_flex_wer.sh $kaldi_output_dir $n2d_mapping
+#         uzh/score_flex_wer.sh $kaldi_output_dir $n2d_mapping
 
-        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
+#         [[ $? -ne 0 ]] && echo -e "\n\tERROR: during F1 scoring\n" && exit 1
 
-    fi
+#     fi
 
-else
+# else
 
-    if [[ $do_wer_flex_scoring -ne 0 ]]; then
-        echo ""
-        echo "###############################"
-        echo "### BEGIN: WER FLEX SCORING ###"
-        echo "###############################"
-        echo ""
+#     if [[ $do_wer_flex_scoring -ne 0 ]]; then
+#         echo ""
+#         echo "###############################"
+#         echo "### BEGIN: WER FLEX SCORING ###"
+#         echo "###############################"
+#         echo ""
 
-        uzh/score_flex_wer.sh $kaldi_output_dir
+#         uzh/score_flex_wer.sh $kaldi_output_dir
 
-        [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
+#         [[ $? -ne 0 ]] && echo -e "\n\tERROR: during flex wer scoring\n" && exit 1
 
-    fi
+#     fi
 
-fi
+# fi
 
-python3 evaluation/find_best_scores.py $kaldi_output_dir    
+# python3 evaluation/find_best_scores.py $kaldi_output_dir    
 
 
 CUR_TIME=$(date +%s)

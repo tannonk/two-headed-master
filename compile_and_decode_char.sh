@@ -50,6 +50,7 @@ output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
 scoring_opts=${7:-"--min-lmwt 1 --max-lmwt 20"}
 n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
+vocabulary=${9:-''}
 # n2d_mapping=${8:-""}
 
 
@@ -107,32 +108,51 @@ START_TIME=$(date +%s) # record time of operations
 ## 1. Compile graph
 ###################
 
+
+## TODO: fix for char v1 with no additional @phones
 if [[ $do_compile_graph -ne 0 ]]; then
 
+    echo "" 
+    echo "###############################" 
+    echo "### BEGIN: GENERATE LEXICON ###" 
+    echo "###############################" 
+    echo ""
 
-    # Generate the lexicon fst:
-    # Instead of generating a lexicon again from scratch, we copy the one
-    # created in train_AM.sh.
+    if [[ ! -z $vocabulary ]]; then
+        # Generate the lexicon fst:
+        
+        # Generate the lexicon especially (text version):
+        
+        lexicon="$lexicon_tmp/lexicon.txt"
+        lexiconp="$lexicon_tmp/lexiconp.txt"
 
-    # # Generate the lexicon (text version):
-    # echo "" 
-    # echo "#########################################" 
-    # echo "### BEGIN: GENERATE LEXICON $lexicon ###" 
-    # echo "#########################################" 
-    # echo ""
-    #
-    # archimob/create_lexicon.py \
-    #   -v $vocabulary \
-    #   -c $GRAPHEMIC_CLUSTERS \
-    #   -o $lexicon
-    #
-    # [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit
-    # 1
+        echo "Input Vocabulary: $vocabulary"
 
-    for f in lexicon.txt nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
-        [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
-        cp $am_ling_dir/$f $lexicon_tmp/
-    done
+        # archimob_char/create_lexicon.py -v $vocabulary -c $GRAPHEMIC_CLUSTERS -o $lexicon
+        
+        python3 archimob_char/add_word_end_symbol_to_lex.py $vocabulary $lexicon $lexiconp
+
+        [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit 1
+    
+        for f in nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
+            [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
+            cp $am_ling_dir/$f $lexicon_tmp/
+        done
+
+        echo -e "\nCreated new lexicon $lexicon\n"
+
+    else
+
+        # Instead of generating a lexicon again from scratch, we copy the one
+        # created in train_AM.sh.
+
+        for f in lexicon.txt nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
+            [[ ! -e $am_ling_dir/$f ]] && echo -e "\n\tERROR: missing $f in $am_ling_dir\n" && exit 1
+            cp $am_ling_dir/$f $lexicon_tmp/
+        done
+
+    fi
+
 
     echo ""
     echo "######################################"
@@ -198,7 +218,6 @@ if [[ $do_compile_graph -ne 0 ]]; then
     echo ""
     echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
     echo ""
-
 
 fi
 
