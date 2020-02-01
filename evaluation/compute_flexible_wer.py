@@ -24,7 +24,8 @@ def set_args():
                     help='File containing reference transcripions.')
     ap.add_argument('-hyp', required=True,
                     help='File containing system output hypotheses.')
-    ap.add_argument('-m', '--n2d_mapping', required=False, help='If provided, flexible WER is calculated based on forms found in mapping.')
+    ap.add_argument('-m', '--n2d_mapping', required=False,
+                    help='If provided, flexible WER is calculated based on forms found in mapping.')
     # ap.add_argument('-f', '--flex', required=False, default=False,
                     # action='store_true', help='if set, flexible WER is calculated.')
     ap.add_argument('--verbose', required=False, action='store_true',
@@ -214,58 +215,101 @@ def main():
     # total_score = 0
     line_count = 0
 
-    with open(args.ref, 'r', encoding='utf8') as r_file, open(args.hyp, 'r', encoding='utf8') as h_file:
+    ref_utts = defaultdict(list)
+
+    with open(args.ref, 'r', encoding='utf8') as r_file:
         for line in r_file:
+            line_list = re.split(r'\s+', line.strip())
+            ref_utts[line_list[0]] = line_list[1:]
+
+    with open(args.hyp, 'r', encoding='utf8') as h_file:
+        for line in h_file:
             line_count += 1
-            ref = normalise_line(line.strip())
-            hyp = normalise_line(next(h_file))
-            # print(ref, '||', hyp)
-            # align_pretty(s, t)
+            line_list = re.split(r'\s+', line.strip())
+            utt_id = line_list[0]
+            hyp_utt = line_list[1:]
+
+            # skip if ref is empty
+            if len(ref_utts[utt_id]) == 0:
+                continue
 
             if n2d_map and d2n_map:
-                ops = opcodes(ref.split(), hyp.split(), n2d_map, d2n_map)
+                ops = opcodes(ref_utts[utt_id], hyp_utt, n2d_map, d2n_map)
             else:
-                ops = opcodes(ref.split(), hyp.split())
+                ops = opcodes(ref_utts[utt_id], hyp_utt)
 
             if args.verbose:
                 ops = Counter(ops)
-                line_error = (ops['d'] + ops['s'] +
-                              ops['i']) / sum(ops.values())
-                print('{} || {} || {:.2f}%'.format(ref, hyp, line_error*100))
+                # line_error = (ops['d'] + ops['s'] + ops['i']) / sum(ops.values())
+                line_error = (ops['d'] + ops['s'] + ops['i']) / \
+                              (ops['d'] + ops['s'] + ops['e'])
+
+                pp_ops = str(ops['e']) + ' ' + str(ops['s']) + \
+                    ' ' + str(ops['i']) + ' ' + str(ops['d'])
+                print('{}\t{}\n{}\t{}\n{}\t#csid {}\t{:.2f}%'.format(utt_id,
+                                                                    ' '.join(ref_utts[utt_id]),
+                                                                    utt_id,
+                                                                    ' '.join(hyp_utt),
+                                                                    utt_id,
+                                                                    pp_ops,
+                                                                    line_error*100))
 
             total_ops += Counter(ops)
             # line_ops = compute_score(ops)
             # total_ops += line_ops
             # total_score += line_score
 
-    op_count = total_ops['d'] + total_ops['s'] + total_ops['i']
-
-    error_rate = (op_count) / sum(total_ops.values())*100
+    op_count= total_ops['d'] + total_ops['s'] + total_ops['i']
+    ref_len= total_ops['d'] + total_ops['s'] + total_ops['e']
+    error_rate= (op_count / ref_len) * 100
+    # error_rate = (op_count) / sum(total_ops.values())*100
 
     if args.n2d_mapping:
         print('%{} {:.2f} [ {} / {}, {} ins, {} del, {} sub ] {}'.format('FLEXWER',
                                                                         error_rate,
                                                                         op_count,
-                                                                        sum(total_ops.values(
-                                                                        )),
+                                                                        ref_len,
                                                                         total_ops['i'],
                                                                         total_ops['d'],
                                                                         total_ops['s'],
                                                                         args.hyp
                                                                         ))
-  
+
     else:
         print('%{} {:.2f} [ {} / {}, {} ins, {} del, {} sub ] {}'.format('FLEXWER',
                                                                          error_rate,
                                                                          op_count,
-                                                                         sum(total_ops.values(
-                                                                         )),
+                                                                         ref_len,
                                                                          total_ops['i'],
                                                                          total_ops['d'],
                                                                          total_ops['s'],
                                                                          args.hyp
                                                                          ))
 
+
+    # if args.n2d_mapping:
+    #     print('%{} {:.2f} [ {} / {}, {} ins, {} del, {} sub ] {}'.format('FLEXWER',
+    #                                                                     error_rate,
+    #                                                                     op_count,
+    #                                                                     sum(total_ops.values(
+    #                                                                     )),
+    #                                                                     total_ops['i'],
+    #                                                                     total_ops['d'],
+    #                                                                     total_ops['s'],
+    #                                                                     args.hyp
+    #                                                                     ))
+
+    # else:
+    #     print('%{} {:.2f} [ {} / {}, {} ins, {} del, {} sub ] {}'.format('FLEXWER',
+    #                                                                      error_rate,
+    #                                                                      op_count,
+    #                                                                      sum(total_ops.values(
+    #                                                                      )),
+    #                                                                      total_ops['i'],
+    #                                                                      total_ops['d'],
+    #                                                                      total_ops['s'],
+    #                                                                      args.hyp
+    #                                                                      ))
 
 if __name__ == "__main__":
     main()
