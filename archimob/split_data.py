@@ -1,15 +1,14 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 """
 Splits training and test data according to json provided as input
-
 Example call:
-    python3 archimob/split_data.py \
-    -i archimob_utterance.csv \
-    -o output_directory \
-    --test test_set.json \
-    --dev dev_set.json (if available)
+        python ${scripts_dir}/split_data.py \
+            -i ${csv_files}/archimob_r2/archimob_r2.csv \
+            -o ${csv_files}/archimob_r2/ \
+            --test ${archimob_files}/archimob_r2/meta_info/testset_utterances.json \
+            --dev dev_set.json (if available)
 """
 
 import sys
@@ -28,6 +27,7 @@ def set_args():
     ap.add_argument('-i', '--input-csv', required=True, help='Input directory containing exmaralda XML')
 
     return ap.parse_args()
+
 
 def parse_json(utterance_json_file):
 
@@ -63,7 +63,7 @@ def main():
 
     # read in dev split data
     if args.dev:
-        dev_utterances = parse_test_utterances(args.dev)
+        dev_utterances = parse_json(args.dev)
         sys.stderr.write('Collected {0} utterances from {1}\n'.format(
             len(test_utterances), args.dev))
     else:
@@ -146,6 +146,7 @@ def main():
     sys.stderr.write('{} utterances writen to train csv.\n'.format(train_c))
     sys.stderr.write('{} utterances writen to test csv.\n'.format(test_c))
     sys.stderr.write('{} utterances writen to dev csv.\n'.format(dev_c))
+
 
 if __name__ == '__main__':
     main()

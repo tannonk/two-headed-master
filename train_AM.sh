@@ -29,33 +29,31 @@ set -u
 ################
 # All these options can be changed from the command line. For example:
 # --num-jobs 16 --use-gpu true ...
-num_jobs=4  # Number of jobs for parallel processing
+num_jobs=32  # Number of jobs for parallel processing
 use_gpu=false  # either true or false
-num_senones=2000  # Number of senones for the triphone stage
-num_gaussians=10000  # Number of Gaussians for the triphone stage
+num_senones=4000  # Number of senones for the triphone stage
+num_gaussians=20000  # Number of Gaussians for the triphone stage
+dev_data="/mnt/iuliia/models/archimob_r2/scores/scores_tri_mmi_4000/lang"  # dev data dir for tdnn training only
 
 #####################################
 # Flags to choose with stages to run:
 #####################################
 ## This is helpful when running an experiment in several steps, to avoid
 # recomputing again all the stages from the very beginning.
-do_archimob_preparation=1
-do_data_preparation=1
-# ## for testing
-# do_feature_extraction=0
-# do_train_monophone=0
-# do_train_triphone=0
-# do_train_triphone_lda=0
-# do_train_mmi=0
-# do_nnet2=0
-# do_nnet2_discriminative=0
-do_feature_extraction=1
-do_train_monophone=1
-do_train_triphone=1
-do_train_triphone_lda=1
-do_train_mmi=1
-do_nnet2=1
-do_nnet2_discriminative=1
+do_archimob_preparation=0
+do_data_preparation=0
+do_feature_extraction=0
+
+do_train_monophone=0
+do_train_triphone=0
+do_train_triphone_lda=0
+do_train_sat=0
+do_train_mmi=0
+do_train_mpe=0
+
+do_nnet2=0
+do_nnet2_discriminative=0
+do_train_tdnn=1
 
 # This call selects the tool used for parallel computing: ($train_cmd)
 . cmd.sh
@@ -67,8 +65,8 @@ do_nnet2_discriminative=1
 . utils/parse_options.sh
 
 echo $0 $@
-if [[ $# -lt 3 ]]; then
-    echo "Wrong call. Should be: $0 input_csv input_wav output_dir transcription"
+if [[ $# -ne 3 ]]; then
+    echo "Wrong call. Should be: $0 input_csv input_wav output_dir"
     exit 1
 fi
 
@@ -78,13 +76,6 @@ fi
 input_csv=$1
 input_wav_dir=$2
 output_dir=$3
-transcription=${4:-orig}
-
-if [ $transcription != "orig" ] && [ $transcription != "norm" ]; then
-    echo "$transcription is an invalid transcription type."
-    echo "Transcription type must be either 'orig' (default) or 'norm'."
-    exit 1
-fi
 
 ###############
 # Intermediate:
@@ -102,6 +93,8 @@ phone_table="$data/lang/phones.txt"
 # GRAPHEMIC_CLUSTERS)
 . uzh/configuration.sh
 
+START_TIME=$(date +%s) # record time of operations
+
 for f in $input_csv $GRAPHEMIC_CLUSTERS $input_wav_dir; do
     [[ ! -e $f ]] && echo "Error: missing $f" && exit 1
 done
@@ -116,7 +109,7 @@ mkdir -p $output_dir
 if [[ $do_archimob_preparation -ne 0 ]]; then
 
     archimob/prepare_Archimob_training_files.sh -s "$SPOKEN_NOISE_WORD" \
-						-n "$SIL_WORD" -t $transcription \
+						-n "$SIL_WORD" \
 						$input_csv $input_wav_dir \
 						$GRAPHEMIC_CLUSTERS \
 						$initial_data
@@ -124,7 +117,6 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     [[ $? -ne 0 ]] && echo 'Error preparing Archimob training files' && exit 1
 
 fi
-
 
 # From this moment on, all the data is organized the way Kaldi likes
 
@@ -150,6 +142,10 @@ if [[ $do_feature_extraction -ne 0 ]]; then
     steps/compute_cmvn_stats.sh $initial_data/data $feats_log_dir $feats_dir
 
     [[ $? -ne 0 ]] && echo 'Error during cmvn computation' && exit 1
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
 
 fi
 
@@ -167,67 +163,133 @@ fi
 
 if [[ $do_train_triphone -ne 0 ]]; then
 
-    steps/align_si.sh --boost-silence 1.25 --nj $num_jobs --cmd "$train_cmd" \
-      $initial_data/data $data/lang $models/mono $models/mono/ali
+    # steps/align_si.sh --boost-silence 1.25 --nj $num_jobs --cmd "$train_cmd" \
+    #   $initial_data/data $data/lang $models/mono $models/mono/ali
 
-    [[ $? -ne 0 ]] && echo 'Error in monophone aligment' && exit 1
+    # [[ $? -ne 0 ]] && echo 'Error in monophone aligment' && exit 1
 
     steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" $num_senones \
 			  $num_gaussians $initial_data/data $data/lang \
-			  $models/mono/ali $models/tri
+			  $models/mono/ali $models/tri_4k20k
 
     [[ $? -ne 0 ]] && echo 'Error in triphone training' && exit 1
 
     # Copy the phone table to the models folder. This will help later when
     # generating the lingware (see compile_lingware.sh)
-    cp $phone_table $models/tri
+    cp $phone_table $models/tri_4k20k
 
 fi
 
 if [[ $do_train_triphone_lda -ne 0 ]]; then
 
     steps/align_si.sh --nj $num_jobs --cmd "$train_cmd" \
-      $initial_data/data $data/lang $models/tri $models/tri/ali
+      $initial_data/data $data/lang $models/tri_4k20k $models/tri_4k20k/ali
 
     [[ $? -ne 0 ]] && echo 'Error in triphone alignment' && exit 1
 
     steps/train_lda_mllt.sh --cmd "$train_cmd" \
       --splice-opts "--left-context=3 --right-context=3" \
-      $num_senones $num_gaussians \
-      $initial_data/data $data/lang $models/tri/ali $models/tri_lda
+      $num_senones \
+      $num_gaussians \
+      $initial_data/data \
+      $data/lang \
+      $models/tri_4k20k/ali \
+      $models/tri_lda_4k20k
 
     [[ $? -ne 0 ]] && echo 'Error in triphone-lda training' && exit 1
 
     # Copy the phone table to the models folder. This will help later when
     # generating the lingware (see compile_lingware.sh)
-    cp $phone_table $models/tri_lda
+    cp $phone_table $models/tri_lda_4k20k
 
 fi
+
+if [[ $do_train_sat -ne 0 ]]; then
+
+    steps/align_fmllr.sh --nj $num_jobs --cmd "$train_cmd" \
+                    $initial_data/data \
+                    $data/lang \
+                    $models/tri_lda \
+                    $models/tri_lda/fmllr_ali
+
+    [[ $? -ne 0 ]] && echo 'Error in fmllr alignment' && exit 1
+
+    steps/train_sat.sh --cmd "$train_cmd" \
+      $num_senones \
+      $num_gaussians \
+      $initial_data/data \
+      $data/lang \
+      $models/tri_lda/fmllr_ali \
+      $models/tri_fmllr_sat
+
+    [[ $? -ne 0 ]] && echo 'Error in triphone-sat training' && exit 1
+
+    # Copy the phone table to the models folder. This will help later when
+    # generating the lingware (see compile_lingware.sh)
+    cp $phone_table $models/tri_fmllr_sat
+
+fi
+
 
 if [[ $do_train_mmi -ne 0 ]]; then
 
     steps/align_si.sh --nj $num_jobs --cmd "$train_cmd" \
-    		      $initial_data/data $data/lang $models/tri_lda \
-    		      $models/tri_lda/ali
+    		      $initial_data/data $data/lang $models/tri_lda_4k20k \
+    		      $models/tri_lda_4k20k/ali
 
     [[ $? -ne 0 ]] && echo 'Error in triphone-lda alignment' && exit 1
 
+    # Create denominator lattices for discriminative MMI/MPE training.
     steps/make_denlats.sh --nj $num_jobs --cmd "$train_cmd" \
-    			  $initial_data/data $data/lang $models/tri_lda \
-    			  $models/tri_lda/denlats
+    			  $initial_data/data $data/lang $models/tri_lda_4k20k \
+    			  $models/tri_lda_4k20k/denlats
 
     [[ $? -ne 0 ]] && echo 'Error creating denominator lattices' && exit 1
 
     steps/train_mmi.sh --cmd "$train_cmd" --boost 0.1 \
-		       $initial_data/data $data/lang $models/tri_lda/ali \
-		       $models/tri_lda/denlats \
-		       $models/tri_mmi
+		       $initial_data/data $data/lang $models/tri_lda_4k20k/ali \
+		       $models/tri_lda_4k20k/denlats \
+		       $models/tri_mmi_4k20k
 
     [[ $? -ne 0 ]] && echo 'Error in triphone-mmi training' && exit 1
 
     # Copy the phone table to the models folder. This will help later when
     # generating the lingware (see compile_lingware.sh)
-    cp $phone_table $models/tri_mmi
+    cp $phone_table $models/tri_mmi_4k20k
+
+fi
+
+if [[ $do_train_mpe -ne 0 ]]; then
+
+    # steps/align_si.sh --nj $num_jobs --cmd "$train_cmd" \
+    #               $initial_data/data $data/lang $models/tri_lda \
+    #               $models/tri_lda/ali
+
+    # [[ $? -ne 0 ]] && echo 'Error in triphone-lda alignment' && exit 1
+
+    # # Create denominator lattices for discriminative MMI/MPE training.
+    # steps/make_denlats.sh --nj $num_jobs --cmd "$train_cmd" \
+    #               $initial_data/data $data/lang $models/tri_lda \
+    #               $models/tri_lda/denlats
+
+    # [[ $? -ne 0 ]] && echo 'Error creating denominator lattices' && exit 1
+
+    steps/train_mpe.sh --cmd "$train_cmd" --boost 0.1 \
+               $initial_data/data \
+               $data/lang \
+               $models/tri_lda_4k20k/ali \
+               $models/tri_lda_4k20k/denlats \
+               $models/tri_mpe_4k20k
+
+    [[ $? -ne 0 ]] && echo 'Error in triphone-mpe training' && exit 1
+
+    # Copy the phone table to the models folder. This will help later when
+    # generating the lingware (see compile_lingware.sh)
+    cp $phone_table $models/tri_mpe_4k20k
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
 
 fi
 
@@ -242,13 +304,13 @@ if [[ $do_nnet2 -ne 0 ]]; then
 
     # Neural network training:
     uzh/run_5d.sh --use-gpu $use_gpu $initial_data/data $data/lang \
-		  $models/tri_mmi/ali $models/nnet2
+		  $models/tri_mmi/ali $models/nnet2_par4k
 
     [[ $? -ne 0 ]] && echo 'Error in nnet2 training' && exit 1
 
     # Copy the phone table to the models folder. This will help later when
     # generating the lingware (see compile_lingware.sh)
-    cp $phone_table $models/nnet2
+    cp $phone_table $models/nnet2_par4k
 
 fi
 
@@ -257,14 +319,36 @@ if [[ $do_nnet2_discriminative -ne 0 ]]; then
     uzh/run_nnet2_discriminative.sh --nj $num_jobs --cmd "$train_cmd" \
 				    --use-gpu $use_gpu \
 				    $initial_data/data $data/lang \
-				    $models/nnet2 $models/discriminative
+				    $models/nnet2 $models/discriminative_par4k
 
     [[ $? -ne 0 ]] && echo 'Error in nnet2 discriminative training' && exit 1
 
     # Copy the phone table to the models folder. This will help later when
     # generating the lingware (see compile_lingware.sh)
-    cp $phone_table $models/discriminative/nnet_disc
+    cp $phone_table $models/discriminative_par4k/nnet_disc
 
 fi
 
+if [[ $do_train_tdnn -ne 0 ]]; then
+
+    uzh/run_tdnn.sh $initial_data/data \
+                    $data/lang \
+                    $dev_data \
+                    $models/tri_mmi/ali \
+                    $models/ivector
+
+    [[ $? -ne 0 ]] && echo 'Error in tdnn training' && exit 1
+
+    # Copy the phone table to the models folder. This will help later when
+    # generating the lingware (see compile_lingware.sh)
+    if [ -f $phone_table ]; then cp $phone_table $models/ivector/chain/tdnn_4k40k; fi
+
+fi
+
+CUR_TIME=$(date +%s)
+echo ""
+echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+echo ""
+echo ""
 echo "Done: $0"
+echo ""
