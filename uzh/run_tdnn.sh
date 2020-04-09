@@ -27,12 +27,13 @@ set -e -o pipefail
 # First the options that are passed through to run_ivector_common.sh
 # (some of which are also used in this script directly).
 use_gpu=false
-stage=5
+stage=18
 nj=69
 train_set=train_si284
 # test_sets="test_dev93 test_eval92"
 gmm=tri4b        # this is the source gmm-dir that we'll use for alignments; it
                  # should have alignments for the specified training data.
+lm="/mnt/iuliia/models/archimob_r2/language_modeling/language_model.arpa"
 
 num_threads_ubm=8
 
@@ -299,17 +300,23 @@ if [ $stage -le 17 ]; then
   # lang directory, one that contained a wordlist and LM of your choice,
   # as long as phones.txt was compatible.
 
+  # Generate G.fst (grammar / language model):
+  arpa2fst --disambig-symbol=#0 \
+    --read-symbol-table=$lang/words.txt \
+    $lm \
+    $lang/G.fst
+
   utils/lang/check_phones_compatible.sh \
     $data/lang_test_tgpr/phones.txt $lang/phones.txt
   utils/mkgraph.sh \
-    --self-loop-scale 1.0 $data/lang_test_tgpr \
+    --self-loop-scale 1.0 $lang \
     $tree_dir $tree_dir/graph_tgpr || exit 1;
 
-  utils/lang/check_phones_compatible.sh \
-    $data/lang_test_bd_tgpr/phones.txt $lang/phones.txt
-  utils/mkgraph.sh \
-    --self-loop-scale 1.0 $data/lang_test_bd_tgpr \
-    $tree_dir $tree_dir/graph_bd_tgpr || exit 1;
+  # utils/lang/check_phones_compatible.sh \
+  #   $data/lang_test_bd_tgpr/phones.txt $lang/phones.txt
+  # utils/mkgraph.sh \
+  #   --self-loop-scale 1.0 $lang \
+  #   $tree_dir $tree_dir/graph_bd_tgpr || exit 1;
 fi
 
 if [ $stage -le 18 ]; then
@@ -321,28 +328,34 @@ if [ $stage -le 18 ]; then
   (
     data_affix=dev
     nspk=$(wc -l <$data/dev_set_hires/spk2utt)
-    for lmtype in tgpr bd_tgpr; do
-      steps/nnet3/decode.sh \
+    # for lmtype in tgpr bd_tgpr; do
+    for lmtype in tgpr; do
+      uzh/decode_nnet3_wer_cer.sh \
         --acwt 1.0 --post-decode-acwt 10.0 \
         --extra-left-context 0 --extra-right-context 0 \
         --extra-left-context-initial 0 \
         --extra-right-context-final 0 \
         --frames-per-chunk $frames_per_chunk \
         --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
-        --online-ivector-dir $exp/nnet3${nnet3_affix}/ivectors_dev_set_hires \
-        $tree_dir/graph_${lmtype} $data/dev_set_hires ${dir}/decode_${lmtype}_${data_affix} || exit 1
+        --online-ivector-dir exp/nnet3${nnet3_affix}/ivectors_dev_set_hires \
+        $tree_dir/graph_${lmtype} \
+        $data/dev_set_hires \
+        ${dir}/decode_${lmtype}_${data_affix} || exit 1
     done
-    steps/lmrescore.sh \
-      --self-loop-scale 1.0 \
-      --cmd "$decode_cmd" $data/lang_test_{tgpr,tg} \
-      $data/dev_set_hires ${dir}/decode_{tgpr,tg}_${data_affix} || exit 1
-    steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-      $data/lang_test_bd_{tgpr,fgconst} \
-     $data/dev_set_hires ${dir}/decode_${lmtype}_${data_affix}{,_fg} || exit 1
-  ) || touch $dir/.error &
-  # done
-  wait
-  [ -f $dir/.error ] && echo "$0: there was a problem while decoding" && exit 1
+  #   steps/lmrescore.sh \
+  #     --self-loop-scale 1.0 \
+  #     --cmd "$decode_cmd" \
+  #     $lang \
+  #     $data/dev_set_hires \
+  #     ${dir}/decode_{tgpr,tg}_${data_affix} || exit 1
+  #   steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
+  #     $data/lang_test_bd_{tgpr,fgconst} \
+  #     $data/dev_set_hires \
+  #     ${dir}/decode_${lmtype}_${data_affix}{,_fg} || exit 1
+  # ) || touch $dir/.error &
+  # # done
+  # wait
+  # [ -f $dir/.error ] && echo "$0: there was a problem while decoding" && exit 1
 fi
 
 # Not testing the 'looped' decoding separately, because for

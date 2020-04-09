@@ -201,7 +201,7 @@ if [ $stage -le 8 ]; then
   nspk=$(wc -l <$data/dev_set_hires/spk2utt)
   steps/online/nnet2/extract_ivectors_online.sh --cmd "$train_cmd" --nj "${nspk}" \
     $data/dev_set_hires $exp/nnet3${nnet3_affix}/extractor \
-    $exp/nnet3${nnet3_affix}/ivectors_data_hires
+    $exp/nnet3${nnet3_affix}/ivectors_dev_set_hires
   # done
 fi
 
