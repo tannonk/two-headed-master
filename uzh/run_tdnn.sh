@@ -27,7 +27,7 @@ set -e -o pipefail
 # First the options that are passed through to run_ivector_common.sh
 # (some of which are also used in this script directly).
 use_gpu=false
-stage=18
+stage=0
 nj=69
 train_set=train_si284
 # test_sets="test_dev93 test_eval92"
