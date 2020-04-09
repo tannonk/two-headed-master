@@ -32,8 +32,8 @@ nsn_word='<NOISE>'
 #####################################
 # Flags to choose with stages to run:
 #####################################
-do_compile_graph=1
-do_data_prep=1
+do_compile_graph=0
+do_data_prep=0
 do_feature_extraction=1
 do_decoding=1
 do_f1_scoring=0
@@ -48,9 +48,9 @@ dev_csv=$3 # dev csv for decoding
 wav_dir=$4 # audio files for decoding
 output_dir=$5 # can be shared between compile and decode
 transcription=${6:-"orig"}
-scoring_opts=${7:-"--min-lmwt 1 --max-lmwt 20"}
+scoring_opts=${7:-"--min-lmwt 5 --max-lmwt 20"}
 n2d_mapping=${8:-"/mnt/tannon/corpus_data/norm2dieth.json"}
-vocabulary=${9:-''}
+phone_lexicon=${9:-''} # file created during am triaining, e.g. .../am_out/initial_data/ling/nonsilence_phones.txt
 # n2d_mapping=${8:-""}
 
 
@@ -109,7 +109,6 @@ START_TIME=$(date +%s) # record time of operations
 ###################
 
 
-## TODO: fix for char v1 with no additional @phones
 if [[ $do_compile_graph -ne 0 ]]; then
 
     echo "" 
@@ -118,7 +117,7 @@ if [[ $do_compile_graph -ne 0 ]]; then
     echo "###############################" 
     echo ""
 
-    if [[ ! -z $vocabulary ]]; then
+    if [[ ! -z $phone_lexicon ]]; then
         # Generate the lexicon fst:
         
         # Generate the lexicon especially (text version):
@@ -126,12 +125,13 @@ if [[ $do_compile_graph -ne 0 ]]; then
         lexicon="$lexicon_tmp/lexicon.txt"
         lexiconp="$lexicon_tmp/lexiconp.txt"
 
-        echo "Input Vocabulary: $vocabulary"
+        echo "Input phone_lexicon: $phone_lexicon"
 
         # archimob_char/create_lexicon.py -v $vocabulary -c $GRAPHEMIC_CLUSTERS -o $lexicon
         
-        python3 archimob_char/add_word_end_symbol_to_lex.py $vocabulary $lexicon $lexiconp
-
+        # python3 archimob_char/create_lexiconp_file.py $vocabulary $lexicon $lexiconp
+        python3 archimob_char/add_word_end_symbol_to_lex.py $phone_lexicon $lexicon
+        
         [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling create_lexicon.py\n" && exit 1
     
         for f in nonsilence_phones.txt optional_silence.txt silence_phones.txt; do
@@ -153,6 +153,8 @@ if [[ $do_compile_graph -ne 0 ]]; then
 
     fi
 
+    rm $lexiconp &> /dev/null
+    
 
     echo ""
     echo "######################################"

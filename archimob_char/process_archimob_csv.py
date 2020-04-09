@@ -525,10 +525,11 @@ def ProcessUnicodeCompounds(data, map_diacritic=None):
     tmp_chars = []
     for char in chars:
         if unicodedata.combining(char):
-            if map_diacritic:
-                chunk.append(map_diacritic)
-            else:
-                chunk.append(char)
+            pass
+            # if map_diacritic:
+            # chunk.append(map_diacritic)
+            # else:
+            #     chunk.append(char)
         else:
             chunk.append(char)
             chunk.reverse()

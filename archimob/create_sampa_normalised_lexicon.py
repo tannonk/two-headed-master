@@ -12,9 +12,10 @@ Example call:
 import sys
 import re
 import argparse
-from pathlib import Path
+# from pathlib import Path
 import json
 from collections import Counter, defaultdict
+
 
 def get_args():
     """
@@ -25,15 +26,19 @@ def get_args():
 
     parser = argparse.ArgumentParser(description=my_desc)
 
-    parser.add_argument('--vocabulary', '-v', required=True, help='Input vocabulary')
+    parser.add_argument('--vocabulary', '-v', required=True,
+                        help='Input vocabulary')
 
-    parser.add_argument('--sampa_file', '-s', required=True, help='JSON file containing dictionary of normalised words and their SAMPA pronunciations')
+    parser.add_argument('--sampa_file', '-s', required=True,
+                        help='JSON file containing dictionary of normalised words and their SAMPA pronunciations')
 
-    parser.add_argument('--outfile', '-o', help='Output lexicon', required=True)
+    parser.add_argument('--outfile', '-o',
+                        help='Output lexicon', required=True)
 
     args = parser.parse_args()
 
     return args
+
 
 def write_lexicon(vocab, outfile, sampa_dict):
     """
@@ -58,7 +63,8 @@ def write_lexicon(vocab, outfile, sampa_dict):
             if prons:
                 c += 1
                 for pron in prons:
-                    pron = re.sub(r'\s?_\s?', ' ', pron) # remove joining underscore from SAMPA pronunciation
+                    # remove joining underscore from SAMPA pronunciation
+                    pron = re.sub(r'\s?_\s?', ' ', pron)
 
                     # avoid duplicates in lexicon!
                     if not (vocab_word, pron) in seen_pairs:
@@ -68,7 +74,9 @@ def write_lexicon(vocab, outfile, sampa_dict):
             else:
                 no_pron[vocab_word] += 1
 
-    print('\nATTENTION: {} items in vocabulary of length {} have at least 1 pronunciation. ({:.2f}%)\n'.format(c, line_c, c/line_c*100))
+    print('\nATTENTION: {} items in vocabulary of length {} have at least 1 pronunciation. ({:.2f}%)\n'.format(
+        c, line_c, c/line_c*100))
+
 
 def main():
 
@@ -89,10 +97,11 @@ def main():
     # print(sum(len(i) for i in lowercased.values()))
     print('SAMPA pronunication dictionary contains:')
     print('\t{} normalised forms'.format(len(lowercased)))
-    print('\t{} pronunciation entries'.format(sum(len(i) for i in lowercased.values())))
-
+    print('\t{} pronunciation entries'.format(
+        sum(len(i) for i in lowercased.values())))
 
     write_lexicon(args.vocabulary, args.outfile, lowercased)
+
 
 if __name__ == '__main__':
     main()

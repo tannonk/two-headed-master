@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-#! -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 This program is a modification of the original provided by Fran. It creates a simple lexicon with a one to one grapheme to phoneme mapping, besides some consonant clusters that are known to map to a single phone.

@@ -65,13 +65,13 @@ def ProcessUnicodeCompounds(data, map_diacritic=None):
     """
     for char in data:
         if not isinstance(char, unicode):
-            raise TypeError, 'All chars in data must be ' \
-                'valid unicode instances!'
+            raise TypeError('All chars in data must be '
+                            'valid unicode instances!')
 
     if map_diacritic != None and \
        not isinstance(map_diacritic, unicode):
-        raise TypeError, 'map_diacritic MUST be None ' \
-            'or a valid unicode string.'
+        raise TypeError('map_diacritic MUST be None '
+                        'or a valid unicode string.')
 
     # Split into individual characters (not graphemes!)
     # it is necessary to recombine once, just in case the user
