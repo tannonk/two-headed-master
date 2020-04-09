@@ -6,26 +6,32 @@
 
 	`cat train.csv dev.csv > train_dev.csv`
 
-	`./archimob/process_archimob_csv.py \
+	```
+	./archimob/process_archimob_csv.py \
 	-i /mnt/tannon/processed/testing_comp/orig/train_dev.csv \
 	-trans orig \
-	-t /mnt/tannon/processed/testing_comp/orig/orig_trans.txt`
+	-t /mnt/tannon/processed/testing_comp/orig/orig_trans.txt
+	```
 
 	1.2 Create lexicon by mapping grapheme clusters to phones symbols (according to Fran's original approach)
 
-	`./archimob/create_simple_lexicon.py \
+	```
+	./archimob/create_simple_lexicon.py \
 	-v /mnt/tannon/processed/testing_comp/orig/orig_trans.txt \
 	-c /home/tannon/kaldi_wrk/two-headed-master/manual/clusters.txt \
-	-o /mnt/tannon/processed/testing_comp/orig/orig_lexicon.txt`
+	-o /mnt/tannon/processed/testing_comp/orig/orig_lexicon.txt
+	```
 
 2. Train AMs
 
-`bash ./run_archimob.sh \
+```
+bash ./run_archimob.sh \
 /mnt/tannon/corpus_data/csv_files/archimob_r2/train.csv \
 /mnt/data/archimob_r2/chunked_wav_files \
 /mnt/tannon/processed/testing_comp/orig/am_out \
 'orig' \
-/mnt/tannon/processed/testing_comp/orig/orig_lexicon.txt`
+/mnt/tannon/processed/testing_comp/orig/orig_lexicon.txt
+```
 
 ----
 
@@ -34,21 +40,27 @@
 1. Ensure that the csv has been normalised to remove unwanted diacrtitics (e.g. 'õ', 'ã', etc.) and ensure that input lexicon has been extended to cover as many in-vocabulary words as possible
 2. Train Acoustic Models
 
-`bash ./run_archimob.sh \
+```
+bash ./run_archimob.sh \
 /mnt/tannon/processed/testing_comp/norm/normalised_train_a2.csv \
 /mnt/data/archimob_r2/chunked_wav_files \
 /mnt/tannon/processed/testing_comp/norm/am_out \
 'norm' \
-/mnt/tannon/processed/testing_comp/norm/wordlist.out.txt`
+/mnt/tannon/processed/testing_comp/norm/wordlist.out.txt
+```
 
 The script `run_archimob.sh` takes the following arguments:
 
-`bash ./run_archimob.sh \
+```
+bash ./run_archimob.sh \
 archimob_input_csv \
 archimob_wav_files \
 output_directory \
 transcription_type \
-lexicon`
+lexicon
+```
+
+---
 
 # Description:
 
