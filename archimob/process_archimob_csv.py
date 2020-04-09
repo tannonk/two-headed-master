@@ -47,45 +47,46 @@ def get_args():
     parser.add_argument('--input-csv', '-i', help='Input csv file',
                         required=True)
 
-    parser.add_argument('--type-transcription', '-trans', help='Define the' \
-                        'the preferable type of transcriptions: original' \
+    parser.add_argument('--type-transcription', '-trans', help='Define the'
+                        'the preferable type of transcriptions: original'
                         '(swiss) or normalized (~german)', type=str,
                         default='orig', nargs='?',
                         choices=['orig', 'norm'])
 
-    parser.add_argument('--do-filtering', '-f', help='If given, exclude ' \
-                        'utterances marked with no-relevant-speech or ' \
+    parser.add_argument('--do-filtering', '-f', help='If given, exclude '
+                        'utterances marked with no-relevant-speech or '
                         'speech-in-speech', action='store_true')
 
-    parser.add_argument('--test-mode', '-u', help='If given, filter the ' \
-                        'utterances considering they are aimed to testing. ' \
-                        'Besides the actions from --do-filtering, utterances ' \
-                        'with some word marked as unintelligible without ' \
+    parser.add_argument('--test-mode', '-u', help='If given, filter the '
+                        'utterances considering they are aimed to testing. '
+                        'Besides the actions from --do-filtering, utterances '
+                        'with some word marked as unintelligible without '
                         'best guess, or truncated words, are rejected',
                         action='store_true')
 
-    parser.add_argument('--do-processing', '-p', help='If given, transform ' \
+    parser.add_argument('--do-processing', '-p', help='If given, transform '
                         'the events from the original transcriptions',
                         action='store_true')
 
-    parser.add_argument('--min-duration', '-d', help='Minimum duration for an' \
+    parser.add_argument('--min-duration', '-d', help='Minimum duration for an'
                         ' utterance to be accepted', type=float, default=0.0)
 
-    parser.add_argument('--spn-word', help='Word used to represent ' \
-                        'speech-like events (e.g. unintelligible words. ' \
+    parser.add_argument('--spn-word', help='Word used to represent '
+                        'speech-like events (e.g. unintelligible words. '
                         'Default = {0}'.format(SPN_SYMBOL),
                         default=SPN_SYMBOL)
 
-    parser.add_argument('--sil-word', help='Word used to represent ' \
-                        'silence events (e.g. breathing. Default = {0}'.format(SIL_SYMBOL),
+    parser.add_argument('--sil-word', help='Word used to represent '
+                        'silence events (e.g. breathing. Default = {0}'.format(
+                            SIL_SYMBOL),
                         default=SIL_SYMBOL)
 
-    parser.add_argument('--nsn-word', help='Word used to represent ' \
-                        'non-speech like events (e.g. [laughter], [coughing])' \
+    parser.add_argument('--nsn-word', help='Word used to represent '
+                        'non-speech like events (e.g. [laughter], [coughing])'
                         ' Default = {0}'.format(NSN_SYMBOL),
                         default=NSN_SYMBOL)
 
-    parser.add_argument('--output-trans', '-t', help='Output transcriptions ' \
+    parser.add_argument('--output-trans', '-t', help='Output transcriptions '
                         'file', required=True)
 
     parser.add_argument('--output-list', '-o', help='Output wave list. If not given, it is assumed, the processing is for the purpose of extracting clean text-level transcriptions suitable for training LM. If given the assumption is that the Kaldi training/decoding format is required.',
@@ -123,7 +124,7 @@ def define_mappings(spn_word, sil_word):
               'unintelligible': spn_word,
               'assent': spn_word,
               'silence': sil_word
-    }
+              }
 
     return output
 
@@ -251,7 +252,7 @@ def process_transcription(input_trans, mappings, spn_symbol):
             # An assent:
             interm.append(mappings['assent'])
         elif re.match(ur'huste[nt]%', token) or \
-             re.match(ur'\[hustet\]', token):
+                re.match(ur'\[hustet\]', token):
             # Coughing:
             interm.append(mappings['cough'])
         elif token == u'niesst' or token == u'niesst%':
@@ -263,7 +264,7 @@ def process_transcription(input_trans, mappings, spn_symbol):
         elif token == u'lacht%' or token == '[lacht]':
             # Laughter:
             interm.append(mappings['laughter'])
-        elif u'[' in token or u']' in token: # re.match(ur'[[{].+', token):
+        elif u'[' in token or u']' in token:  # re.match(ur'[[{].+', token):
             # Not a lot of coherence here: comments which should probably be
             # ignored, words in other languages... Let's map it to SPN_SYMBOL,
             # and cross our fingers
@@ -345,8 +346,8 @@ def main():
 
         if len(row) != header_size:
             print(row)
-            sys.stderr.write('Error reading {0}: different number of elements' \
-                             ' in header ({1}), and line {2} ' \
+            sys.stderr.write('Error reading {0}: different number of elements'
+                             ' in header ({1}), and line {2} '
                              '({3})\n'.format(args.input_csv, header_size,
                                               index, len(row)))
             sys.exit(1)
@@ -362,24 +363,25 @@ def main():
         if args.type_transcription == 'norm':
             transcription = data_dict['normalized']
         else:
-            transcription = data_dict['transcription'] # original Dieth transcription
+            # original Dieth transcription
+            transcription = data_dict['transcription']
 
         # Check filtering:
         if args.do_filtering or args.test_mode:
             if int(data_dict['anonymity']) == 1 or \
-            int(data_dict['speech_in_speech']) == 1 or \
-            int(data_dict['missing_audio']) == 1 or \
-            int(data_dict['no_relevant_speech']) == 1:
+                    int(data_dict['speech_in_speech']) == 1 or \
+                    int(data_dict['missing_audio']) == 1 or \
+                    int(data_dict['no_relevant_speech']) == 1:
                 n_filtered += 1
                 if verbose:
                     print '\tFiltering {0}. anonym={1};' \
-                    ' sp_in_sp={2};' \
-                    ' non_sp{3};' \
-                    ' non_sp{4}'.format(data_dict['utt_id'],
-                                        data_dict['anonymity'],
-                                        data_dict['speech_in_speech'],
-                                        data_dict['missing_audio'],
-                                        data_dict['no_relevant_speech'])
+                        ' sp_in_sp={2};' \
+                        ' non_sp{3};' \
+                        ' non_sp{4}'.format(data_dict['utt_id'],
+                                            data_dict['anonymity'],
+                                            data_dict['speech_in_speech'],
+                                            data_dict['missing_audio'],
+                                            data_dict['no_relevant_speech'])
                 continue
 
         # 19.11.19: this no longer does anything, since items are already preprocessed in process_exmaralda_xml.py
@@ -392,7 +394,7 @@ def main():
                 continue
             # Truncated words:
             if (re.search(ur'\w/', transcription) or
-                re.search(ur'/\w', transcription)):
+                    re.search(ur'/\w', transcription)):
                 if verbose:
                     print '\tFiltering {0} (truncated ' \
                         'word)'.format(data_dict['utt_id'])
@@ -400,11 +402,12 @@ def main():
 
         if args.do_processing:
             # Process text:
-            transcription = process_transcription(transcription, mappings, args.spn_word)
+            transcription = process_transcription(
+                transcription, mappings, args.spn_word)
             # If do preprocessing is NOT TRUE, we keep the original one as it is.
             # You probably do not want to do this...
 
-        if args.output_list: # if user has specified a wav list file as output argument, assume format should match kaldi expected input format
+        if args.output_list:  # if user has specified a wav list file as output argument, assume format should match kaldi expected input format
             # Write the transcriptions file:
             output_t.write('{0}\t{1}\n'.format(data_dict['utt_id'],
                                                transcription.encode('utf8')))
@@ -412,15 +415,14 @@ def main():
             # Write the utterance list:
             output_l.write('{0}\n'.format(data_dict['utt_id']))
 
-        else: # otherwise, we assume the user wants just the clean transcriptions which are suitable for training a language model
-        # in this case, filter out meta tags <SPOKEN_NOISE>, <SIL_WORD>, <NOISE>
+        else:  # otherwise, we assume the user wants just the clean transcriptions which are suitable for training a language model
+            # in this case, filter out meta tags <SPOKEN_NOISE>, <SIL_WORD>, <NOISE>
             transcription = re.sub(u'<SPOKEN_NOISE>', u'', transcription)
             transcription = re.sub(u'<SIL_WORD>', u'', transcription)
             transcription = re.sub(u'<NOISE>', u'', transcription)
             transcription = re.sub(ur'\s+', u' ', transcription.strip())
             if transcription:
                 output_t.write('{}\n'.format(transcription.encode('utf8')))
-
 
     # if verbose:
     print("{} transcriptions were filtered out while processing archimob csv.\n".format(n_filtered))

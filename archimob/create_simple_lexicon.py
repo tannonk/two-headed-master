@@ -270,6 +270,13 @@ def main():
                                                              err))
         sys.exit(1)
 
+    vocab = set()
+    for line in input_f:
+        line = line.decode('utf8').strip().split()
+        for w in line:
+            if not '*' in w:
+                vocab.add(w.lower())
+
     ####
     if args.n2d:
         print 'Creating lexicon for normalised transcriptions based upon mapping provided... {}'.format(args.n2d)
@@ -314,13 +321,15 @@ def main():
     ####
 
     else:
-        for word in input_f:
 
-            word = word.rstrip().decode('utf8')
+        for word in sorted(vocab):
+            # for word in input_f:
+
+            # word = word.rstrip().decode('utf8')
             if isinstance(args.map_diacritic, str):
                 args.map_diacritic = args.map_diacritic.decode('utf8')
 
-            transcription = transcribe_simple(word.lower(), clusters,
+            transcription = transcribe_simple(word, clusters,
                                               max_length_cluster,
                                               args.map_diacritic)
 
