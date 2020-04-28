@@ -7,7 +7,7 @@ set -e -o pipefail
 # contains the common feature preparation and iVector-related parts of the
 # script.  See those scripts for examples of usage.
 
-stage=4
+stage=0
 nj=69
 train_set=train_si284   # you might set this to e.g. train.
 test_sets="test_dev93 test_eval92"

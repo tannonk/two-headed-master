@@ -8,8 +8,9 @@
 
 # Begin configuration section.
 stage=1
-transform_dir=    # dir to find fMLLR transforms.
-nj=4 # number of decoding jobs.  If --transform-dir set, must match that number!
+transform_dir=  # dir to find fMLLR transform GMM model.
+transform_dir_decode=  # dir to find fMLLR transforms for test data.
+nj=69 # number of decoding jobs.  If --transform-dir set, must match that number!
 acwt=0.1  # Just a default value, used for adaptation and beam-pruning..
 cmd=run.pl
 beam=15.0
@@ -99,6 +100,13 @@ case $feat_type in
     ;;
   *) echo "$0: invalid feature type $feat_type" && exit 1;
 esac
+
+# if decoding of GMM model with fmllr transforms is in a different from model direction
+# copy it to the model's direction
+if [ ! -z "$transform_dir_decode" ]; then
+  cp -r $transform_dir_decode $transform_dir
+fi
+
 if [ ! -z "$transform_dir" ]; then
   echo "$0: using transforms from $transform_dir"
   [ ! -s $transform_dir/num_jobs ] && \
@@ -158,7 +166,7 @@ fi
 
 if [ $stage -le 2 ]; then
   [ ! -z $iter ] && iter_opt="--iter $iter"
-  steps/diagnostic/analyze_lats.sh --cmd "$cmd" $iter_opt $graphdir $dir
+  uzh/diagnostic/analyze_lats.sh --cmd "$cmd" $iter_opt $graphdir $dir $model
 fi
 
 # The output of this script is the files "lat.*.gz"-- we'll rescore this at

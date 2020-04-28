@@ -23,16 +23,16 @@ export LC_ALL=C # from compile_lingware.sh
 . utils/parse_options.sh
 
 # Relevant for decoding
-num_jobs=32  # Number of jobs for parallel processing
+num_jobs=69  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
 
 #####################################
 # Flags to choose with stages to run:
 #####################################
-do_compile_graph=1
-do_data_prep=1
-do_feature_extraction=1
+do_compile_graph=0
+do_data_prep=0
+do_feature_extraction=0
 do_decoding=1
 
 ##################
@@ -71,6 +71,7 @@ decode_dir="$output_dir/decode" # output dir for decoding
 lang_dir="$output_dir/lang" # output dir for intermediate language data
 feats_dir="$output_dir/feats"
 feats_log_dir="$output_dir/feats/log"
+sidir="/mnt/iuliia/models/archimob_r2/scores/ext_clusters/tri_mmi_exclust/decode"
 # wav_scp="$lang_dir/wav.scp" NOT USED !!!
 
 ##########

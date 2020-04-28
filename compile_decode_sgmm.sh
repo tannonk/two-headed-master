@@ -1,16 +1,17 @@
 #!/bin/bash
-transform_dir=  # dir to find fMLLR transforms.
+sgmm_name=
+discr_sgmm=  # the name of mmi trained SGMM model is needed
+transform_model="scores_tri_fmllr_sat"
 
-transform_dir_model=  # dir to find fMLLR GMM model.
-transform_dir_decode=  # dir to find fMLLR transforms.
 
 set -u # from train_am.sh and compile_lingware.sh and decode_nnet.sh
 export LC_ALL=C # from compile_lingware.sh
 
 ## This script is a combination of compile_lingware.sh and decode_nnet.sh
 #####################################
-## For decoding GMM-based models
+## For decoding SGMM-based models (compile_decode_sgmm.sh)
 #####################################
+## Assumed that the model is called sgmm!!
 ## First, we compile the lingware to run the decoder with certain input
 ## lexicon, language model, and acoustic models.
 ## Second, we extract features from test data.
@@ -28,13 +29,11 @@ export LC_ALL=C # from compile_lingware.sh
 
 # This parses any input option, if supplied.
 . utils/parse_options.sh
-# . parse_options.sh || exit 1;
 
 # Relevant for decoding
 num_jobs=32  # Number of jobs for parallel processing
 spn_word='<SPOKEN_NOISE>'
 sil_word='<SIL_WORD>'
-
 
 #####################################
 # Flags to choose with stages to run:
@@ -42,11 +41,8 @@ sil_word='<SIL_WORD>'
 do_compile_graph=1
 do_data_prep=1
 do_feature_extraction=1
-do_decoding=1
-
-
-echo "$0 $@"  # Print the command line for logging
-
+do_decoding_sgmm=1
+do_decoding_sgmm_discr=0
 
 ##################
 # Input arguments:
@@ -54,13 +50,12 @@ echo "$0 $@"  # Print the command line for logging
 
 lm=$1
 am_dir=$2 # am_out directory (output of train_AM.sh, usually am_out/)
-model_dir=$3 # model directory (it's assumed that model_dir contains 'tree' and 'final.mdl')
+# model_dir=$3 # model directory (it's assumed that model_dir contains 'tree' and 'final.mdl')
+model_dir=$3 # all models general directory
 dev_csv=$4 # dev csv for decoding
 wav_dir=$5 # audio files for decoding
 output_dir=$6 # can be shared between compile and decode
 transcription=${7:-"orig"}
-
-echo "$transcription"
 
 #################
 # Existing files: cf. am_out/initial_data/ling/ vs am_out/data/lang/
@@ -82,11 +77,14 @@ lexicon_tmp="$tmp_dir/lexicon"
 prepare_lang_tmp="$tmp_dir/prepare_lang_tmp"
 tmp_lang="$tmp_dir/lang"
 
-decode_dir="$output_dir/decode" # output dir for decoding
+# decode_dir="$output_dir/decode" # output dir for decoding
+# decode_dir_fmllr="$output_dir/decode_fmllr" # output dir for decoding
 lang_dir="$output_dir/lang" # output dir for intermediate language data
 feats_dir="$output_dir/feats"
 feats_log_dir="$output_dir/feats/log"
 # wav_scp="$lang_dir/wav.scp" NOT USED !!!
+transform_dir_decode="$output_dir/$transform_model/decode"
+train_data_dir="/mnt/iuliia/models/archimob_r2/models/models/initial_data/data"
 
 ##########
 ## Output:
@@ -102,7 +100,7 @@ for f in $lm $phone_table; do
     [[ ! -e $f ]] && echo -e "\n\tERROR: missing input $f\n" && exit 1
 done
 
-mkdir -p $output_dir $tmp_dir $lexicon_tmp $prepare_lang_tmp $tmp_lang $decode_dir $lang_dir $feats_dir $feats_log_dir
+mkdir -p $output_dir $tmp_dir $lexicon_tmp $prepare_lang_tmp $tmp_lang $output_dir/$sgmm_name/decode $lang_dir $feats_dir $feats_log_dir
 
 # . ./path.sh
 
@@ -200,7 +198,8 @@ if [[ $do_compile_graph -ne 0 ]]; then
     echo ""
 
     # Generate the complete cascade:
-    utils/mkgraph.sh $tmp_lang $model_dir $output_dir
+    # utils/mkgraph.sh $data/lang $models/sgmm $models/sgmm/graph || exit 1;
+    utils/mkgraph.sh $tmp_lang $model_dir/$sgmm_name $output_dir/$sgmm_name
 
     [[ $? -ne 0 ]] && echo -e "\n\tERROR: calling mkgraph.sh\n" && exit 1
 
@@ -313,7 +312,7 @@ fi
 # $decode_dir --> dir=$3
 # $model_dir --> srcdir=$4
 
-if [[ $do_decoding -ne 0 ]]; then
+if [[ $do_decoding_sgmm -ne 0 ]]; then
 
     echo ""
     echo "#######################"
@@ -321,18 +320,106 @@ if [[ $do_decoding -ne 0 ]]; then
     echo "#######################"
     echo ""
 
-    rm -rf $decode_dir/*
-    uzh/decode_nnet_wer_cer.sh --cmd "$decode_cmd" --nj $num_jobs \
-        $output_dir \
-        $lang_dir \
-        $decode_dir \
-        $model_dir
+    rm -rf $output_dir/$sgmm_name/decode/*
 
-    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during decoding\n" && exit 1
+    # In this case transform-dir must be a decode direction:
+    # hence, containing transforms for the test data
+    uzh/decode_sgmm_wer_cer.sh --nj $num_jobs --cmd "$decode_cmd" \
+        --transform-dir $transform_dir_decode \
+        $output_dir/$sgmm_name \
+        $lang_dir \
+        $output_dir/$sgmm_name/decode \
+        $model_dir/$sgmm_name || exit 1;
+
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
+
+    # uzh/decode_sgmm_wer_cer.sh --use-fmllr true --nj $num_jobs --cmd "$decode_cmd" \
+    #   --transform-dir $transform_dir_decode  \
+    #   $output_dir/$sgmm_name \
+    #   $lang_dir \
+    #   $output_dir/$sgmm_name/decode_fmllr \
+    #   $model_dir/$sgmm_name || exit 1;
+
+
+    # [[ $? -ne 0 ]] && echo -e "\n\tERROR: during sgmm decoding\n" && exit 1
 
     # Copy the results to the output folder:
-    # cp $decode_dir/scoring_kaldi/best_wer $output_dir
-    # cp -r $decode_dir/scoring_kaldi/wer_details $output_dir/
+    # cp $output_dir/$sgmm_name/decode/scoring_kaldi/best_wer $output_dir/$sgmm_name
+    # cp -r $output_dir/$sgmm_name/decode/scoring_kaldi/wer_details $output_dir/$sgmm_name /
+
+    CUR_TIME=$(date +%s)
+    echo ""
+    echo "TIME ELAPSED: $(($CUR_TIME - $START_TIME)) seconds"
+    echo ""
+fi
+
+
+if [[ $do_decoding_sgmm_discr -ne 0 ]]; then
+    echo ""
+    echo "#######################"
+    echo "### BEGIN: discriminative SGMM DECODING ###"
+    echo "#######################"
+    echo ""
+
+    for iter in 1 2 3 4; do
+        steps/decode_sgmm2_rescore.sh --cmd "$decode_cmd" --iter $iter \
+            --transform-dir $transform_dir_decode \
+            $tmp_lang \
+            $lang_dir \
+            $output_dir/$sgmm_name/decode \
+            $output_dir/$discr_sgmm/decode_it$iter \
+            $model_dir/sgmm_mmi &
+    done
+    (
+     steps/train_mmi_sgmm2.sh --cmd "$decode_cmd" \
+            --transform-dir $transform_dir_decode \
+            --boost 0.2 --drop-frames true \
+            $train_data_dir \
+            $tmp_lang \
+            $model_dir/sgmm_ali \
+            $model_dir/sgmm_denlats \
+            $model_dir/sgmm_mmi_b0.2_x
+
+     for iter in 1 2 3 4; do
+      steps/decode_sgmm2_rescore.sh --cmd "$decode_cmd" --iter $iter \
+        --transform-dir $transform_dir_decode \
+        $tmp_lang \
+        $lang_dir \
+        $output_dir/$sgmm_name/decode \
+        $output_dir/sgmm_mmi_b0.2_x/decode_it$iter \
+        $model_dir/sgmm_mmi_b0.2_x &
+     done
+    )
+    wait
+    # steps/decode_combine.sh $lang_dir \
+    #                         $tmp_lang \
+    #                         exp/tri1/decode \
+    #                         exp/tri2a/decode \
+    #                         $output_dir/combine_1_2a/decode || exit 1;
+    steps/decode_combine.sh $lang_dir \
+                        $tmp_lang \
+                        $output_dir/$sgmm_name/decode \
+                        $output_dir/score_tri_mmi_4000/decode \
+                        $output_dir/combine_sgmm_3mmi_4k40k/decode || exit 1;
+
+    # combining the sgmm run and the best MMI+fMMI run.
+    # steps/decode_combine.sh $lang_dir \
+    #                         $tmp_lang \
+    #                         $output_dir/$sgmm_name/decode \
+    #                         exp/tri3b_fmmi_c/decode_it5 \
+    #                         exp/combine_sgmm2_4a_3b_fmmic5/decode || exit 1;
+
+    # steps/decode_combine.sh $lang_dir \
+    #                         $tmp_lang \
+    #                         $output_dir/sgmm_mmi_b0.2/decode_it4 \
+    #                         exp/tri3b_fmmi_c/decode_it5 \
+    #                         $output_dir/combine_sgmm_mmi_3b_fmmic5/decode || exit 1;
+
+
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: during discr sgmm decoding\n" && exit 1
 
 fi
 

@@ -33,7 +33,8 @@ train_set=train_si284
 # test_sets="test_dev93 test_eval92"
 gmm=tri4b        # this is the source gmm-dir that we'll use for alignments; it
                  # should have alignments for the specified training data.
-lm="/mnt/iuliia/models/archimob_r2/language_modeling/language_model.arpa"
+# lm="/mnt/iuliia/models/archimob_r2/language_modeling/language_model.arpa"
+lm="/mnt/INTERSPEECH2020/lms/dieth_90000_open_mkn3.arpa"
 
 num_threads_ubm=8
 
@@ -337,7 +338,7 @@ if [ $stage -le 18 ]; then
         --extra-right-context-final 0 \
         --frames-per-chunk $frames_per_chunk \
         --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
-        --online-ivector-dir exp/nnet3${nnet3_affix}/ivectors_dev_set_hires \
+        --online-ivector-dir $exp/nnet3${nnet3_affix}/ivectors_dev_set_hires \
         $tree_dir/graph_${lmtype} \
         $data/dev_set_hires \
         ${dir}/decode_${lmtype}_${data_affix} || exit 1

@@ -120,11 +120,11 @@ if [ -z "$si_dir" ]; then # we need to do the speaker-independent decoding pass.
       [ "`cat $graphdir/num_pdfs`" -eq `am-info --print-args=false $alignment_model | grep pdfs | awk '{print $NF}'` ] || \
         { echo "Mismatch in number of pdfs with $alignment_model"; exit 1; }
     fi
-    steps/decode.sh --scoring-opts "$scoring_opts" \
+    uzh/decode.sh --scoring-opts "$scoring_opts" \
            --num-threads $num_threads --skip-scoring $skip_scoring \
            --acwt $acwt --nj $nj --cmd "$cmd" --beam $first_beam \
-           --model $alignment_model --max-active \
-           $first_max_active $graphdir $data $si_dir $srcdir || exit 1;
+           --model $alignment_model --max-active $first_max_active \
+           $graphdir $data $si_dir $srcdir || exit 1;
   fi
 fi
 ##
