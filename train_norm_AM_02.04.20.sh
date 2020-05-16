@@ -27,7 +27,7 @@ num_gaussians=10000  # Number of Gaussians for the triphone stage
 #####################################
 ## This is helpful when running an experiment in several steps, to avoid
 # recomputing again all the stages from the very beginning.
-do_archimob_preparation=0
+do_archimob_preparation=1
 do_data_preparation=1
 do_feature_extraction=0
 do_train_monophone=0
@@ -109,32 +109,17 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     echo "###################################"
     echo ""
 
-    if [[ ! -z $pron_lex ]]; then
-      archimob/prepare_Archimob_training_files.sh \
-        -s "$SPOKEN_NOISE_WORD" \
-        -n "$SIL_WORD" \
-        -t $transcription \
-        -p $pron_lex \
-        $input_csv \
-        $input_wav_dir \
-        $GRAPHEMIC_CLUSTERS \
-        $initial_data
-
-      [[ $? -ne 0 ]] && echo -e "\n\tERROR: preparing Archimob training files\n" && exit 1
-
-    else
-      archimob/prepare_Archimob_training_files.sh \
+    archimob/prepare_Archimob_training_files_02.04.20.sh \
       -s "$SPOKEN_NOISE_WORD" \
       -n "$SIL_WORD" \
       -t $transcription \
+      -p $pron_lex \
       $input_csv \
       $input_wav_dir \
       $GRAPHEMIC_CLUSTERS \
       $initial_data
 
-      [[ $? -ne 0 ]] && echo -e "\n\tERROR: preparing Archimob training files\n" && exit 1
-
-    fi
+    [[ $? -ne 0 ]] && echo -e "\n\tERROR: preparing Archimob training files\n" && exit 1
 
     CUR_TIME=$(date +%s)
     echo ""
@@ -142,7 +127,6 @@ if [[ $do_archimob_preparation -ne 0 ]]; then
     echo ""
 
 fi
-
 
 
 # From this moment on, all the data is organized the way Kaldi likes
