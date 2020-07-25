@@ -49,7 +49,13 @@ Framework specific:
 
 `lms`
 	- scripts for compiling language models
-	
+
+`scripts`
+	- small scripts for processing different parts of ArchiMob and Kaldi outputs
+
+`experiments`
+	- Makefiles containing commands for exectuing experiments (e.g. training AMs, compiling WFSTs and evaluating)
+
 Kaldi:
 
 `conf`
