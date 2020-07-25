@@ -1,4 +1,6 @@
 
+![Two Headed Master](https://vignette.wikia.nocookie.net/muppet/images/d/d8/Tumblr-Two-HeadedMonster.png/revision/latest?cb=20111115223501)
+
 # Description:
 
 This branch contains the working code for the master's project focusing on language representation and modelling for Swiss German ASR (2019/2020).
