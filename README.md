@@ -13,23 +13,19 @@ The Kaldi (version 5.5.) recipe egs/wsj/s5 (commit 8cc5c8b32a49f8d963702c6be681d
 
 # Main scripts:
 
-`run_archimob.sh`
-	- data preparation
-	- acoustic models training
+`run_archimob.sh`: acoustic model training
 
 ```
 run_archimob.sh <archimob_input_csv> <archimob_wav_files_directory> <am_output_directory> <transcription_type> <pronunciation_lexicon>
 ```
 
-`compile_and_decode.sh`
-	- lingware compilation and validation
+`compile_and_decode.sh`: lingware compilation and validation
 
 ```
 compile_and_decode.sh <arpa_lm> <am_output_directory> <archimob_dev_csv> <archimob_wav_files_directory> <lw_output_directory> <transcription_type> <lmwt_params> <flexwer_mapping>
 ```
 
-`evaluate.sh`
-	- test set decoding and evaluation
+`evaluate.sh`: test set decoding and evaluation
 
 ```
 ./evaluate.sh <archimob_test_csv> <archimob_wav_files_directory> <am_output_directory> <lw_output_directory> <eval_output_directory> <lmwt> <transcription_type> <flexwer_mapping>
@@ -37,50 +33,36 @@ compile_and_decode.sh <arpa_lm> <am_output_directory> <archimob_dev_csv> <archim
 
 # Configuration:
 
-`path.sh`
-	- script to specify the Kaldi root directory and to add certain directories to the path.
+`path.sh`: script to specify the Kaldi root directory and to add certain directories to the path.
 
-`cmd.sh`
-	- script to select the way of running parallel jobs.
+`cmd.sh`: script to select the way of running parallel jobs.
 
 # Folders:
 
 Framework specific:
 
-`archimob`
-	- scripts related to processing the Archimob files for word-level modelling.
+`archimob`: scripts related to processing the Archimob files for word-level modelling.
 
-`archimob_char`
-	- scripts related to processing the Archimob files for character-level modelling.
+`archimob_char`: scripts related to processing the Archimob files for character-level modelling.
 
-`uzh`
-	- secondary scripts not included in the Kaldi recipe.
+`uzh`: secondary scripts not included in the Kaldi recipe.
 
-`manual`
-	- manually generated files.
+`manual`: manually generated files.
 
-`doc`
- 	- documentation files.
+`doc`: documentation files.
 
-`lms`
-	- scripts for compiling language models
+`lms`: scripts for compiling language models
 
-`scripts`
-	- small scripts for processing different parts of ArchiMob and Kaldi outputs
+`scripts`: small scripts for processing different parts of ArchiMob and Kaldi outputs
 
-`experiments`
-	- Makefiles containing commands for exectuing experiments (e.g. training AMs, compiling WFSTs and evaluating)
+`experiments`: Makefiles containing commands for exectuing experiments (e.g. training AMs, compiling WFSTs and evaluating)
 
 Kaldi:
 
-`conf`
-	- configuration files.
-`local`
-	- original recipe-specific files from egs/wsj/s5.
-`utils`
-	- utilities shared among all the Kaldi recipes.
-`steps`
-	- general scripts related to the different steps followed in the Kaldi recipes.
+`conf`: configuration files.
+`local`: original recipe-specific files from egs/wsj/s5.
+`utils`: utilities shared among all the Kaldi recipes.
+`steps`: general scripts related to the different steps followed in the Kaldi recipes.
 
 ---
 
@@ -153,9 +135,13 @@ orig \
 
 ----
 
-# Steps for running experiment on normaliased transcriptions
+# Steps for running experiment on normalised transcriptions
 
-Steps are largely the same as above. The main difference is occurs in the lexicon generation and training language model. For all basic commands, the <transcription_type> argument should be `norm` rather than `orig`.
+Steps are largely the same as above. The main differences include: 
+	- lexicon generation
+	- language model training 
+	- for all basic commands, the <transcription_type> argument must be `norm`, not `orig`
+	- no surface-level mapping for FlexWER evaluations
 
 Useful tips for working with normalised transcriptions:
 - ensure that the csv has been normalised to remove unwanted diacrtitics (e.g. 'õ', 'ã', etc.) 
