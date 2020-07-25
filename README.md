@@ -59,10 +59,13 @@ Framework specific:
 
 Kaldi:
 
-`conf`: configuration files.
-`local`: original recipe-specific files from egs/wsj/s5.
-`utils`: utilities shared among all the Kaldi recipes.
-`steps`: general scripts related to the different steps followed in the Kaldi recipes.
+`conf`: configuration files
+
+`local`: original recipe-specific files from egs/wsj/s5
+
+`utils`: utilities shared among all the Kaldi recipes
+
+`steps`: general scripts related to the different steps followed in the Kaldi recipes
 
 ---
 
@@ -101,8 +104,8 @@ bash ./run_archimob.sh \
 
 3. Compile WFST and decode on validation set to get best WIP and LMWT
 
-NB. This step assumes a pre-computed LM in .arpa format (as produced by SRILM/MITLM), e.g., `../lms/dieth/mitlm_mkn_3.arpa`.
-NB. If mapping of normalised to dieth wordforms is available, include it as the last argument for computing FlexWER.
+- **NB.** This step assumes a pre-computed LM in .arpa format (as produced by SRILM/MITLM), e.g., `../lms/dieth/mitlm_mkn_3.arpa`.
+- **NB.** If mapping of normalised to dieth wordforms is available, include it as the last argument for computing FlexWER.
 
 ```
 bash ./compile_and_decode.sh \
@@ -118,8 +121,8 @@ orig \
 
 4. Decoding test set and evaluating performance
 
-NB. Specify best LMWT according to validation set decoding explicitly (in this example, `11`)
-NB. If mapping of normalised to dieth wordforms is available, include it as the last argument for computing FlexWER.
+- **NB.** Specify best LMWT according to validation set decoding explicitly (in this example, `11`)
+- **NB.** If mapping of normalised to dieth wordforms is available, include it as the last argument for computing FlexWER.
 
 ```
 bash ./evaluate.sh \
